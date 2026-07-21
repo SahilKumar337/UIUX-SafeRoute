@@ -5,7 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import {
   Shield, ChevronLeft, AlertTriangle, Send, CheckCircle2,
   Volume2, Navigation, X, Home, MapPin, AlertOctagon,
-  User, Settings, Star, Heart, Activity, Camera, Eye, Zap
+  User, Settings, Star, Heart, Activity, Camera, Eye, Zap,
+  Plus
 } from 'lucide-react';
 
 /* ── Fix Leaflet's broken default icon paths in webpack/vite ── */
@@ -85,7 +86,7 @@ const youIcon = L.divIcon({
 const TileLayerDark = () => (
   <TileLayer
     url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+    attribution=""
   />
 );
 
@@ -224,7 +225,53 @@ const MobilePrototype = () => {
       fontFamily: 'Inter, sans-serif',
       color: C.text,
     }}>
-      {/* ── LEFT PRESENTATION SIDEBAR (For easy jumping during presentation/jury review) ── */}
+      {/* Inject premium style overrides and animations */}
+      <style>{`
+        @keyframes sosPulse {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+          70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        @keyframes sosRing {
+          from { transform: scale(0.85); opacity: 0.8; }
+          to { transform: scale(1.4); opacity: 0; }
+        }
+        @keyframes alertStrobe {
+          0%, 100% { background-color: rgba(239, 68, 68, 0.05); }
+          50% { background-color: rgba(239, 68, 68, 0.18); }
+        }
+        @keyframes liveDot {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.4); opacity: 0.4; }
+        }
+        @keyframes screenFade {
+          from { opacity: 0; transform: scale(0.985) translateY(8px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .screen-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          animation: screenFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .leaflet-control-attribution {
+          display: none !important;
+        }
+        button {
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        button:hover {
+          filter: brightness(1.15);
+          transform: translateY(-1px);
+        }
+        button:active {
+          filter: brightness(0.9);
+          transform: translateY(1px) scale(0.98);
+        }
+      `}</style>
+
+      {/* ── LEFT PRESENTATION SIDEBAR ── */}
       <div style={{
         width: 320,
         background: '#0e1118',
@@ -287,7 +334,6 @@ const MobilePrototype = () => {
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
@@ -311,7 +357,7 @@ const MobilePrototype = () => {
         background: '#090b10',
         position: 'relative',
       }}>
-        {/* Toast Toast notification */}
+        {/* Toast Notification */}
         {toast && (
           <div style={{
             position: 'absolute',
@@ -354,7 +400,7 @@ const MobilePrototype = () => {
             
             {/* 1. Splash Screen */}
             {screen === '01-splash' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 24px 60px' }}>
+              <div className="screen-container" style={{ justifyContent: 'space-between', padding: '40px 24px 60px' }}>
                 <div />
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
                   <div style={{
@@ -398,7 +444,7 @@ const MobilePrototype = () => {
 
             {/* 2. Onboarding */}
             {screen === '02-onboarding' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 24px 40px' }}>
+              <div className="screen-container" style={{ justifyContent: 'space-between', padding: '20px 24px 40px' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button onClick={() => setScreen('03-login')} style={{ background: 'none', border: 'none', color: C.textS, fontSize: 14, cursor: 'pointer' }}>Skip</button>
                 </div>
@@ -443,7 +489,7 @@ const MobilePrototype = () => {
 
             {/* 3. Login Screen */}
             {screen === '03-login' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 32 }}>
+              <div className="screen-container" style={{ padding: 32 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, margin: '40px 0 30px' }}>
                   <div style={{ width: 48, height: 48, borderRadius: 14, background: C.purple, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Shield size={24} color={C.white} />
@@ -499,7 +545,7 @@ const MobilePrototype = () => {
 
             {/* 4. Dashboard */}
             {screen === '04-dashboard' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className="screen-container">
                 {/* Header */}
                 <div style={{ padding: '16px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -523,9 +569,9 @@ const MobilePrototype = () => {
                   </div>
                 </div>
 
-                {/* Mini Interactive Leaflet Map */}
+                {/* Mini Interactive Leaflet Map (Attribution control disabled) */}
                 <div style={{ flex: 1, position: 'relative', margin: '0 20px', borderRadius: 16, overflow: 'hidden', border: '1px solid #1c2130', minHeight: 160 }}>
-                  <MapContainer key="dashboard-map" center={MAP_CENTER} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                  <MapContainer key="dashboard-map" center={MAP_CENTER} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                     <TileLayerDark />
                     <Marker position={ORIGIN} icon={youIcon} />
                     <Marker position={DEST} icon={makeMarker(C.green, 'Campus Apt')} />
@@ -592,7 +638,7 @@ const MobilePrototype = () => {
 
             {/* 5. Navigate (Route Selection) */}
             {screen === '05-navigate' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className="screen-container">
                 {/* Search Bar Panel */}
                 <div style={{ padding: '12px 20px', background: C.card, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -605,9 +651,9 @@ const MobilePrototype = () => {
                   </div>
                 </div>
 
-                {/* Map Route Visualizer */}
+                {/* Map Route Visualizer (Attribution control disabled) */}
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <MapContainer key="navigate-routes-map" center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                  <MapContainer key="navigate-routes-map" center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                     <TileLayerDark />
                     
                     {/* Safe Corridor route */}
@@ -688,11 +734,11 @@ const MobilePrototype = () => {
 
             {/* 6. Active Navigation */}
             {screen === '06-active-nav' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className="screen-container">
                 {/* HUD Banner */}
                 <div style={{
                   padding: '12px 18px', background: C.card, borderBottom: `1px solid ${C.border}`,
-                  display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center'
+                  display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Navigation size={18} color={C.green} style={{ transform: 'rotate(45deg)' }} />
@@ -712,9 +758,9 @@ const MobilePrototype = () => {
                   </button>
                 </div>
 
-                {/* Map with current route */}
+                {/* Map with current route (Attribution control disabled) */}
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <MapContainer key="active-navigation-map" center={MAP_CENTER} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                  <MapContainer key="active-navigation-map" center={MAP_CENTER} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                     <TileLayerDark />
                     <Polyline positions={SAFE_COORDS} pathOptions={{ color: C.green, weight: 6 }} />
                     <Marker position={ORIGIN} icon={youIcon} />
@@ -758,82 +804,169 @@ const MobilePrototype = () => {
               </div>
             )}
 
-            {/* 7. SOS Trigger Screen */}
+            {/* 7. SOS Trigger Screen (Identical to Figma Design) */}
             {screen === '07-sos-trigger' && (
-              <div style={{
-                flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                padding: '40px 24px 60px', background: 'radial-gradient(circle, rgba(239,68,68,0.1) 0%, rgba(11,14,20,1) 100%)'
-              }}>
-                <div style={{ display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: C.red, letterSpacing: 2 }}>EMERGENCY TRANSMISSION</span>
+              <div className="screen-container" style={{ background: C.bg, justifyContent: 'space-between' }}>
+                {/* Top Warning Strip */}
+                <div style={{ background: C.redD, padding: '12px 0', textAlign: 'center', borderBottom: `1px solid ${C.red}`, flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: C.red, letterSpacing: 2 }}>⚠️ EMERGENCY MODE</span>
+                </div>
+
+                {/* Text description */}
+                <div style={{ padding: '20px 24px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <h2 style={{ fontSize: 26, fontWeight: 800, color: C.white, margin: 0 }}>Emergency SOS</h2>
+                  <span style={{ fontSize: 14, color: C.textS }}>Hold button 3 seconds to trigger</span>
+                </div>
+
+                {/* Pulsing button */}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 230, position: 'relative' }}>
+                  {/* Outer Rings */}
+                  <div style={{ position: 'absolute', width: 228, height: 228, borderRadius: '50%', background: C.redD, opacity: 0.15, animation: 'sosRing 2.2s infinite' }} />
+                  <div style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', background: C.redD, opacity: 0.3, animation: 'sosRing 1.6s infinite' }} />
+                  
+                  {/* Center Solid Button */}
                   <button
-                    onClick={() => setScreen('04-dashboard')}
-                    style={{ background: 'none', border: 'none', color: C.textS, fontSize: 14, cursor: 'pointer' }}
+                    onClick={() => setScreen('08-sos-activated')}
+                    style={{
+                      position: 'absolute', width: 136, height: 136, borderRadius: '50%', background: C.red,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      border: 'none', cursor: 'pointer', boxShadow: '0 0 35px rgba(239,68,68,0.7)',
+                      animation: 'sosPulse 1.6s infinite'
+                    }}
                   >
-                    Cancel
+                    <span style={{ color: C.white, fontSize: 30, fontWeight: 900, lineHeight: 1 }}>SOS</span>
+                    <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 700, letterSpacing: 2, marginTop: 4 }}>HOLD</span>
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                {/* Countdown display */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <div style={{
-                    width: 160, height: 160, borderRadius: 80, background: C.redD,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `4px solid ${C.red}`, cursor: 'pointer',
-                    boxShadow: '0 0 30px rgba(239,68,68,0.4)',
-                    animation: 'sosPulse 1.5s infinite'
-                  }}
-                  onClick={() => setScreen('08-sos-activated')}
-                  >
-                    <div style={{ color: C.white, fontSize: 32, fontWeight: 900 }}>SOS</div>
+                    width: 100, height: 90, borderRadius: 45, background: C.card, border: `1.5px solid ${C.border}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <span style={{ fontSize: 40, fontWeight: 900, color: C.red, lineHeight: 1 }}>{sosCountdown}</span>
+                    <span style={{ fontSize: 11, color: C.textS, marginTop: 2 }}>seconds</span>
                   </div>
-                  <span style={{ fontSize: 14, color: C.textS, textAlign: 'center' }}>Holding / Tapping triggers dispatch</span>
-                  <h2 style={{ fontSize: 48, fontWeight: 900, color: C.red, margin: 0 }}>0{sosCountdown}s</h2>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ background: C.card, borderRadius: 12, padding: 12, border: '1px solid #1c2130' }}>
-                    <div style={{ fontSize: 11, color: C.textS, marginBottom: 4 }}>DISSENT / STANDBY GROUP</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
-                      <span>Mom & Dad (Parents)</span>
-                      <span style={{ color: C.green }}>Active</span>
+                {/* Cancel Button */}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '0 24px' }}>
+                  <button
+                    onClick={() => setScreen('04-dashboard')}
+                    style={{
+                      width: 170, height: 44, borderRadius: 22, background: C.card2, border: `1.5px solid ${C.border}`,
+                      color: C.text, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    ✕  Cancel SOS
+                  </button>
+                </div>
+
+                {/* Contacts Preview section */}
+                <div style={{ padding: '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.textS }}>Will alert your contacts:</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ background: C.card, borderRadius: 12, padding: '10px 14px', border: `1.5px solid ${C.border}`, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 14, background: C.card2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontWeight: 700, fontSize: 11 }}>M</div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Mom - Priya Kumar</div>
+                          <div style={{ fontSize: 10, color: C.textS }}>+91 98765 00001</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ background: C.card, borderRadius: 12, padding: '10px 14px', border: `1.5px solid ${C.border}`, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 14, background: C.card2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontWeight: 700, fontSize: 11 }}>D</div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Dad - Rajesh Kumar</div>
+                          <div style={{ fontSize: 10, color: C.textS }}>+91 98765 00002</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  <button style={{ background: 'none', border: 'none', color: C.purple, fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'center', marginTop: 4 }}>
+                    + Add Emergency Contact
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* 8. SOS Activated Screen */}
+            {/* 8. SOS Activated Screen (Identical to Figma Design) */}
             {screen === '08-sos-activated' && (
-              <div style={{
-                flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                padding: '40px 24px 60px', background: C.bg
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
+              <div className="screen-container" style={{ background: C.bg, justifyContent: 'space-between', padding: '0 24px 40px' }}>
+                {/* Red warning header */}
+                <div style={{
+                  width: '100%', padding: '32px 0 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                  background: 'linear-gradient(to bottom, rgba(239, 68, 68, 0.15), transparent)'
+                }}>
+                  {/* Warning emblem */}
                   <div style={{
-                    width: 72, height: 72, borderRadius: 36, background: C.redD,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${C.red}`
+                    width: 76, height: 76, borderRadius: 38, background: C.redD, border: `3px solid ${C.red}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    <Volume2 size={36} color={C.red} />
+                    <span style={{ fontSize: 36, fontWeight: 900, color: C.white, fontFamily: 'Inter' }}>!</span>
                   </div>
-                  <h1 style={{ fontSize: 32, fontWeight: 900, color: C.red, margin: 0, letterSpacing: 2 }}>ALERT DISPATCHED</h1>
-                  <p style={{ fontSize: 13, color: C.textS, textAlign: 'center', margin: 0, lineHeight: 1.6 }}>
-                    Siren activated. Emergency coordinates shared with closest response units and family.
-                  </p>
+                  <h1 style={{ fontSize: 26, fontWeight: 900, color: C.red, margin: 0, letterSpacing: 3 }}>ALERT SENT</h1>
+                  <span style={{ fontSize: 15, color: C.textS, textAlign: 'center', whiteSpace: 'pre-line' }}>
+                    {`Emergency contacts notified\nand authorities alerted`}
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ background: C.card, borderRadius: 12, padding: 14, border: '1px solid #1c2130' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700 }}>Dispatch Log</span>
-                      <span style={{ fontSize: 10, color: C.red, fontWeight: 800 }}>LIVE BROADCAST</span>
+                {/* Live location share status card */}
+                <div style={{
+                  background: C.card, borderLeft: `3px solid ${C.green}`, borderRadius: 14, padding: 14,
+                  display: 'flex', alignItems: 'center', gap: 12, border: `1.5px solid ${C.border}`, borderLeft: `3px solid ${C.green}`
+                }}>
+                  {/* Blinking green dot */}
+                  <div style={{
+                    width: 8, height: 8, borderRadius: 4, background: C.green,
+                    boxShadow: `0 0 8px ${C.green}`, animation: 'liveDot 1.2s infinite'
+                  }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Live location is being shared</div>
+                    <div style={{ fontSize: 12, color: C.green, fontWeight: 600, marginTop: 2 }}>Updated every 10 seconds</div>
+                  </div>
+                </div>
+
+                {/* Dispatch timeline logs */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.textS }}>Contacts Notified:</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ background: C.card, borderRadius: 12, padding: '12px 16px', border: `1.5px solid ${C.border}`, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 16, background: C.card2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontWeight: 700 }}>M</div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Mom - Priya Kumar</div>
+                          <div style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Notified · 0s ago</div>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: C.textS }}>
-                      <div>👨‍👩‍👧 Parents notified via SMS (0s ago)</div>
-                      <div>🚔 Police Command Room alerted (1s ago)</div>
-                      <div>📍 High-resolution GPS streaming active</div>
+                    <div style={{ background: C.card, borderRadius: 12, padding: '12px 16px', border: `1.5px solid ${C.border}`, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 16, background: C.card2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontWeight: 700 }}>D</div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Dad - Rajesh Kumar</div>
+                          <div style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>Notified · 2s ago</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ background: C.card, borderRadius: 12, padding: '12px 16px', border: `1.5px solid ${C.border}`, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 16, background: C.card2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontWeight: 700 }}>P</div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Police Control Room</div>
+                          <div style={{ fontSize: 12, color: C.amber, fontWeight: 600 }}>Alert Sent · Auto</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </div>
 
+                {/* Cancel button */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button
                     onClick={() => {
                       setScreen('04-dashboard');
@@ -841,19 +974,21 @@ const MobilePrototype = () => {
                       triggerToast('SOS alert cancelled successfully.');
                     }}
                     style={{
-                      height: 52, borderRadius: 26, border: 'none', background: C.green, color: '#000',
-                      fontSize: 15, fontWeight: 800, cursor: 'pointer'
+                      height: 52, borderRadius: 26, border: 'none', background: C.card2, border: `1.5px solid ${C.border}`,
+                      color: C.text, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
                     }}
                   >
-                    I am Safe - Cancel Alert
+                    I'm Safe - Cancel SOS
                   </button>
+                  <span style={{ fontSize: 13, color: C.textS, textAlign: 'center' }}>SOS active for 00:45</span>
                 </div>
               </div>
             )}
 
             {/* 9. Hazard Report Screen */}
             {screen === '09-hazard-report' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24, justifyContent: 'space-between' }}>
+              <div className="screen-container" style={{ padding: 24, justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                   <h3 style={{ fontSize: 18, fontWeight: 800, color: C.white, margin: 0 }}>Report Hazard</h3>
 
@@ -958,16 +1093,16 @@ const MobilePrototype = () => {
 
             {/* 10. Community Map */}
             {screen === '10-community-map' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className="screen-container">
                 {/* Header info */}
-                <div style={{ padding: '12px 18px', background: C.card, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '12px 18px', background: C.card, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>Community Safety Map</h3>
                   <span style={{ fontSize: 11, color: C.textS }}>{hazards.length} alerts near you</span>
                 </div>
 
-                {/* Map showing all reports */}
+                {/* Map showing all reports (Attribution control disabled) */}
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <MapContainer key="community-map" center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                  <MapContainer key="community-map" center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                     <TileLayerDark />
                     {hazards.map(h => (
                       <Marker key={h.id} position={h.pos} icon={makeHazardMarker(h.label, h.severity === 'high' ? C.red : C.amber)} />
@@ -985,7 +1120,7 @@ const MobilePrototype = () => {
                       boxShadow: '0 4px 15px rgba(99,102,241,0.5)', cursor: 'pointer'
                     }}
                   >
-                    +
+                    <Plus size={20} />
                   </button>
                 </div>
 
@@ -995,7 +1130,7 @@ const MobilePrototype = () => {
 
             {/* 11. Route Summary */}
             {screen === '11-summary' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24, justifyContent: 'space-between' }}>
+              <div className="screen-container" style={{ padding: 24, justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
                   <div style={{
                     width: 60, height: 60, borderRadius: 30, background: C.greenD,
@@ -1058,7 +1193,7 @@ const MobilePrototype = () => {
 
             {/* 12. Profile Screen */}
             {screen === '12-profile' && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className="screen-container">
                 <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 80, height: 80, borderRadius: 40, background: C.purple, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 800 }}>SK</div>
                   <div style={{ textAlign: 'center' }}>
@@ -1071,7 +1206,7 @@ const MobilePrototype = () => {
                 </div>
 
                 {/* Profile metrics */}
-                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '10px 20px', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '10px 20px', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 16, fontWeight: 800 }}>47</div>
                     <div style={{ fontSize: 10, color: C.textS }}>Safe Journeys</div>
