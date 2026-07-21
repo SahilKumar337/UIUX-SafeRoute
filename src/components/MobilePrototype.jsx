@@ -732,9 +732,9 @@ const MobilePrototype = () => {
                     <div style={{ width: 10, height: 10, borderRadius: 5, background: C.greenD, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.green, fontSize: 10, fontWeight: 800 }}>o</div>
                     <span style={{ fontSize: 14, color: C.textS }}>Current Location (GPS)</span>
                   </div>
-                  <div style={{ background: C.card, borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${C.purpleD}` }}>
+                  <div style={{ background: C.card, borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, border: `1px solid ${C.purple}` }}>
                     <div style={{ width: 10, height: 10, borderRadius: 5, background: C.purpleD, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontSize: 10, fontWeight: 800 }}>v</div>
-                    <span style={{ fontSize: 14, color: C.textM }}>Where to? Search...</span>
+                    <span style={{ fontSize: 14, color: C.white, fontWeight: 600 }}>Campus Apartment (Dormitory)</span>
                   </div>
                 </div>
 
@@ -746,54 +746,85 @@ const MobilePrototype = () => {
                     <Polyline positions={UNSAFE_COORDS} pathOptions={{ color: C.red, weight: 5, opacity: routeType === 'unsafe' ? 1.0 : 0.4, dashArray: '10 5' }} />
                     <Marker position={ORIGIN} icon={youIcon} />
                     <Marker position={DEST} icon={makeMarker(C.green, 'Campus Dorm')} />
+
+                    {/* Warning pin on red line */}
+                    {routeType === 'unsafe' && (
+                      <Marker position={[12.979, 77.601]} icon={makeHazardMarker('High Crime Alley', C.red)} />
+                    )}
                   </MapContainer>
                 </div>
 
                 {/* Recommended Routes Section matching Figma 1-to-1 */}
-                <div style={{ padding: '14px 20px', background: C.bg, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 4px' }}>Recommended Routes</h4>
+                <div style={{ padding: '14px 20px', background: C.bg, display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 310, overflowY: 'auto' }}>
+                  <h4 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 2px' }}>Recommended Routes</h4>
                   
-                  {/* Route option 1 */}
+                  {/* Route option 1: Safest Route */}
                   <div
                     onClick={() => setRouteType('safe')}
                     style={{
                       background: C.card, borderRadius: 14, padding: '12px 14px',
                       border: `1.5px solid ${routeType === 'safe' ? C.green : C.border}`,
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'
+                      display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer'
                     }}
                   >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Safest Route</div>
-                      <div style={{ fontSize: 12, color: C.textS, marginTop: 2 }}>24 min · 3.2 km</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Safest Route (Green)</div>
+                        <div style={{ fontSize: 12, color: C.textS, marginTop: 2 }}>24 min · 3.2 km</div>
+                      </div>
+                      <div style={{ background: C.greenD, color: C.green, padding: '6px 12px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>98% Safe</div>
                     </div>
-                    <div style={{ background: C.greenD, color: C.green, padding: '6px 12px', borderRadius: 14, fontSize: 11, fontWeight: 600 }}>98% Safe</div>
+                    <div style={{ fontSize: 11, color: C.green, lineHeight: 1.4 }}>
+                      ✓ 100% Lit Streets · 14 CCTV Cameras · Active Pedestrians
+                    </div>
                   </div>
 
-                  {/* Route option 2 */}
+                  {/* Route option 2: Unsafe Fastest Route */}
                   <div
                     onClick={() => setRouteType('unsafe')}
                     style={{
                       background: C.card, borderRadius: 14, padding: '12px 14px',
-                      border: `1.5px solid ${routeType === 'unsafe' ? C.amber : C.border}`,
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'
+                      border: `1.5px solid ${routeType === 'unsafe' ? C.red : C.border}`,
+                      display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer'
                     }}
                   >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Fastest Route</div>
-                      <div style={{ fontSize: 12, color: C.textS, marginTop: 2 }}>18 min · 2.8 km</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Fastest Shortcut (Red)</div>
+                        <div style={{ fontSize: 12, color: C.textS, marginTop: 2 }}>18 min · 2.8 km</div>
+                      </div>
+                      <div style={{ background: C.redD, color: C.red, padding: '6px 12px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>38% Risky</div>
                     </div>
-                    <div style={{ background: C.amberD, color: C.amber, padding: '6px 12px', borderRadius: 14, fontSize: 11, fontWeight: 600 }}>76% Safe</div>
+                    <div style={{ fontSize: 11, color: C.red, lineHeight: 1.4 }}>
+                      ⚠️ High Crime Area · Dim Alleyways (&lt;15 Lux) · No CCTV · Isolated
+                    </div>
                   </div>
+
+                  {/* Route Risk Explanation Banner */}
+                  {routeType === 'unsafe' ? (
+                    <div style={{ background: C.redD, border: `1px solid ${C.red}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>🚨 Why Red Route is Dangerous:</span>
+                      <div style={{ fontSize: 11, color: C.text, lineHeight: 1.5 }}>
+                        • 3 Recent Robbery/Harassment incidents reported<br />
+                        • Zero Working Streetlights in 800m corridor<br />
+                        • Low footfall & no active shopfronts after 9 PM
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ background: C.greenD, border: `1px solid ${C.green}`, borderRadius: 12, padding: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>🛡️ Safe Corridor Verified by AI & Community Reports</span>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => navigateTo('06-active-nav')}
                     style={{
                       width: '100%', height: 52, borderRadius: 26, border: 'none',
-                      background: C.purple, color: C.white,
-                      fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 4
+                      background: routeType === 'safe' ? C.purple : C.red, color: C.white,
+                      fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 4, flexShrink: 0
                     }}
                   >
-                    Start Navigation
+                    {routeType === 'safe' ? 'Start Safe Navigation' : '⚠️ Proceed via Unsafe Shortcut'}
                   </button>
                 </div>
 
