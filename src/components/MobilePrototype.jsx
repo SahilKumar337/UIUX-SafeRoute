@@ -837,33 +837,50 @@ const MobilePrototype = () => {
               <div className="screen-container">
                 {/* Map full screen background */}
                 <div style={{ flex: 1, position: 'relative' }}>
-                  <MapContainer key="active-navigation-map" center={MAP_CENTER} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
+                  <MapContainer key={`active-nav-map-${routeType}`} center={MAP_CENTER} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
                     <TileLayerDark />
-                    <Polyline positions={SAFE_COORDS} pathOptions={{ color: C.green, weight: 6 }} />
+                    {routeType === 'safe' ? (
+                      <Polyline positions={SAFE_COORDS} pathOptions={{ color: C.green, weight: 6 }} />
+                    ) : (
+                      <>
+                        <Polyline positions={UNSAFE_COORDS} pathOptions={{ color: C.red, weight: 6, dashArray: '10 5' }} />
+                        <Marker position={[12.979, 77.601]} icon={makeHazardMarker('High Crime Alley', C.red)} />
+                      </>
+                    )}
                     <Marker position={ORIGIN} icon={youIcon} />
-                    <Marker position={DEST} icon={makeMarker(C.green, 'Dest')} />
+                    <Marker position={DEST} icon={makeMarker(routeType === 'safe' ? C.green : C.red, 'Campus Dorm')} />
                   </MapContainer>
 
-                  {/* Navulating Tag */}
+                  {/* Navigating Tag */}
                   <div style={{ position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 20px', zIndex: 1000 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: C.white, background: 'rgba(0,0,0,0.5)', padding: '4px 10px', borderRadius: 10 }}>NAVIGATING</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: C.white, background: routeType === 'safe' ? 'rgba(0,0,0,0.6)' : 'rgba(239,68,68,0.9)', padding: '4px 10px', borderRadius: 10 }}>
+                      {routeType === 'safe' ? 'SAFE NAVIGATION' : '⚠️ UNSAFE ROUTE ACTIVE'}
+                    </div>
                     <button
                       onClick={() => navigateTo('11-summary')}
-                      style={{ background: 'rgba(0,0,0,0.5)', border: 'none', color: C.white, padding: '4px 12px', borderRadius: 14, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
+                      style={{ background: 'rgba(0,0,0,0.6)', border: 'none', color: C.white, padding: '4px 12px', borderRadius: 14, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}
                     >
                       X Exit
                     </button>
                   </div>
                 </div>
 
-                {/* Figma Direction Sheet at bottom */}
+                {/* Direction Sheet at bottom */}
                 <div style={{ background: C.card, padding: 20, borderTop: `1px solid ${C.border}`, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 22, background: C.purpleD, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple, fontSize: 22, fontWeight: 900 }}>‹</div>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 22,
+                      background: routeType === 'safe' ? C.purpleD : C.redD,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: routeType === 'safe' ? C.purple : C.red,
+                      fontSize: 22, fontWeight: 900
+                    }}>
+                      {routeType === 'safe' ? '‹' : '›'}
+                    </div>
                     <div>
-                      <div style={{ fontSize: 12, color: C.textS }}>Turn left on</div>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>MG Road</div>
-                      <div style={{ fontSize: 14, color: C.textS }}>In 200m</div>
+                      <div style={{ fontSize: 12, color: C.textS }}>{routeType === 'safe' ? 'Turn left on' : 'Turn right on'}</div>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: C.text }}>{routeType === 'safe' ? 'MG Road' : 'Cubbon Alley'}</div>
+                      <div style={{ fontSize: 14, color: C.textS }}>{routeType === 'safe' ? 'In 200m' : 'In 100m'}</div>
                     </div>
                   </div>
 
@@ -872,21 +889,29 @@ const MobilePrototype = () => {
                   {/* Stats */}
                   <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'left' }}>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>3.2 km</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{routeType === 'safe' ? '2.9 km' : '2.2 km'}</div>
                       <div style={{ fontSize: 11, color: C.textS }}>Remaining</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>12 min</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{routeType === 'safe' ? '35 min' : '26 min'}</div>
                       <div style={{ fontSize: 11, color: C.textS }}>ETA</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: C.green }}>LOW</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: routeType === 'safe' ? C.green : C.red }}>
+                        {routeType === 'safe' ? 'LOW' : 'HIGH'}
+                      </div>
                       <div style={{ fontSize: 11, color: C.textS }}>Risk Level</div>
                     </div>
                   </div>
 
-                  <div style={{ background: C.greenD, padding: 10, borderRadius: 12, textAlign: 'center', color: C.green, fontSize: 12, fontWeight: 500 }}>
-                    v Safe route · Well-lit area · Low risk
+                  <div style={{
+                    background: routeType === 'safe' ? C.greenD : C.redD,
+                    border: `1px solid ${routeType === 'safe' ? C.green : C.red}`,
+                    padding: 10, borderRadius: 12, textAlign: 'center',
+                    color: routeType === 'safe' ? C.green : C.red,
+                    fontSize: 12, fontWeight: 600
+                  }}>
+                    {routeType === 'safe' ? 'v Safe route · Well-lit area · Low risk' : '⚠️ Unsafe shortcut · Dim lighting · High risk area'}
                   </div>
 
                   <div style={{ display: 'flex', gap: 10 }}>
