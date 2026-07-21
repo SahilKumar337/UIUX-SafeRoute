@@ -312,6 +312,16 @@ const MobilePrototype = () => {
           min-height: 0;
           animation: screenFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        /* Hide all native browser scrollbars for clean aesthetic */
+        ::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+        * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
         .leaflet-control-attribution {
           display: none !important;
         }
@@ -755,76 +765,66 @@ const MobilePrototype = () => {
                 </div>
 
                 {/* Recommended Routes Section matching Figma 1-to-1 */}
-                <div style={{ padding: '14px 20px', background: C.bg, display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 310, overflowY: 'auto' }}>
+                <div style={{ padding: '14px 20px', background: C.bg, display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
                   <h4 style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 2px' }}>Recommended Routes</h4>
                   
-                  {/* Route option 1: Safest Route */}
+                  {/* Route option 1: SafeRoute */}
                   <div
                     onClick={() => setRouteType('safe')}
                     style={{
-                      background: C.card, borderRadius: 14, padding: '12px 14px',
+                      background: C.card, borderRadius: 14, padding: '14px 16px',
                       border: `1.5px solid ${routeType === 'safe' ? C.green : C.border}`,
                       display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Safest Route (Green)</div>
-                        <div style={{ fontSize: 12, color: C.textS, marginTop: 2 }}>24 min · 3.2 km</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>SafeRoute</span>
+                        <span style={{ background: C.greenD, color: C.green, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>94% Safe</span>
                       </div>
-                      <div style={{ background: C.greenD, color: C.green, padding: '6px 12px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>98% Safe</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: C.text }}>35 <span style={{ fontSize: 12, fontWeight: 500 }}>min</span></span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11, color: C.green, lineHeight: 1.4 }}>
-                      ✓ 100% Lit Streets · 14 CCTV Cameras · Active Pedestrians
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: C.textS }}>💡 Lit streets · Open stores · CCTV cameras</span>
+                      <span style={{ fontSize: 11, color: C.textS, fontWeight: 500 }}>2.9 km</span>
                     </div>
                   </div>
 
-                  {/* Route option 2: Unsafe Fastest Route */}
+                  {/* Route option 2: Shortest Route (Red / Unsafe) */}
                   <div
                     onClick={() => setRouteType('unsafe')}
                     style={{
-                      background: C.card, borderRadius: 14, padding: '12px 14px',
+                      background: C.card, borderRadius: 14, padding: '14px 16px',
                       border: `1.5px solid ${routeType === 'unsafe' ? C.red : C.border}`,
                       display: 'flex', flexDirection: 'column', gap: 6, cursor: 'pointer'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Fastest Shortcut (Red)</div>
-                        <div style={{ fontSize: 12, color: C.textS, marginTop: 2 }}>18 min · 2.8 km</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Shortest Route</span>
+                        <span style={{ background: C.redD, color: C.red, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>38% Safe</span>
                       </div>
-                      <div style={{ background: C.redD, color: C.red, padding: '6px 12px', borderRadius: 14, fontSize: 11, fontWeight: 700 }}>38% Risky</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: 18, fontWeight: 800, color: C.text }}>26 <span style={{ fontSize: 12, fontWeight: 500 }}>min</span></span>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 11, color: C.red, lineHeight: 1.4 }}>
-                      ⚠️ High Crime Area · Dim Alleyways (&lt;15 Lux) · No CCTV · Isolated
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: C.red, opacity: 0.9 }}>⚠️ Dim alleys · No CCTV · Low footfall</span>
+                      <span style={{ fontSize: 11, color: C.textS, fontWeight: 500 }}>2.2 km</span>
                     </div>
                   </div>
-
-                  {/* Route Risk Explanation Banner */}
-                  {routeType === 'unsafe' ? (
-                    <div style={{ background: C.redD, border: `1px solid ${C.red}`, borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: C.red }}>🚨 Why Red Route is Dangerous:</span>
-                      <div style={{ fontSize: 11, color: C.text, lineHeight: 1.5 }}>
-                        • 3 Recent Robbery/Harassment incidents reported<br />
-                        • Zero Working Streetlights in 800m corridor<br />
-                        • Low footfall & no active shopfronts after 9 PM
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ background: C.greenD, border: `1px solid ${C.green}`, borderRadius: 12, padding: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>🛡️ Safe Corridor Verified by AI & Community Reports</span>
-                    </div>
-                  )}
 
                   <button
                     onClick={() => navigateTo('06-active-nav')}
                     style={{
-                      width: '100%', height: 52, borderRadius: 26, border: 'none',
+                      width: '100%', height: 50, borderRadius: 25, border: 'none',
                       background: routeType === 'safe' ? C.purple : C.red, color: C.white,
-                      fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 4, flexShrink: 0
+                      fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 4, flexShrink: 0
                     }}
                   >
-                    {routeType === 'safe' ? 'Start Safe Navigation' : '⚠️ Proceed via Unsafe Shortcut'}
+                    {routeType === 'safe' ? 'Start Safe Navigation' : '⚠️ Proceed via Shortest Route'}
                   </button>
                 </div>
 
