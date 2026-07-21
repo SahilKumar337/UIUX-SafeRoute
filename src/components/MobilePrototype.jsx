@@ -3,8 +3,9 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
-  Shield, ChevronLeft, AlertTriangle, Send,
-  CheckCircle2, Volume2, Navigation, X,
+  Shield, ChevronLeft, AlertTriangle, Send, CheckCircle2,
+  Volume2, Navigation, X, Home, MapPin, AlertOctagon,
+  User, Settings, Star, Heart, Activity, Camera, Eye, Zap
 } from 'lucide-react';
 
 /* ── Fix Leaflet's broken default icon paths in webpack/vite ── */
@@ -15,779 +16,1128 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-/* ─────────────── Design Tokens ─────────────── */
-const T = {
-  bg0:      '#0B0E14',
-  bg1:      '#131720',
-  bg2:      '#1C2130',
-  bg3:      '#252D3A',
-  border:   '#2A3347',
-  green:    '#00D26A',
-  greenDim: 'rgba(0,210,106,0.12)',
-  red:      '#FF3D5A',
-  redDim:   'rgba(255,61,90,0.12)',
-  amber:    '#FFC542',
-  amberDim: 'rgba(255,197,66,0.12)',
-  blue:     '#5B8DEF',
-  purple:   '#8B5CF6',
-  purpleDim:'rgba(139,92,246,0.12)',
-  text0:    '#FFFFFF',
-  text1:    '#C6CEDF',
-  text2:    '#6B7A99',
+/* ─────────────── Design Tokens (Matches Figma System) ─────────────── */
+const C = {
+  bg:      '#0B0E14',
+  card:    '#131720',
+  card2:   '#1C2130',
+  purple:  '#6366F1',
+  purpleD: 'rgba(99, 102, 241, 0.15)',
+  green:   '#10B981',
+  greenD:  'rgba(16, 185, 129, 0.15)',
+  red:     '#EF4444',
+  redD:    'rgba(239, 68, 68, 0.15)',
+  amber:   '#F59E0B',
+  amberD:  'rgba(245, 158, 11, 0.15)',
+  text:    '#E2E8F0',
+  textS:   '#8892B0',
+  textM:   '#596178',
+  border:  '#1C2130',
+  white:   '#FFFFFF',
 };
 
 /* ─────────────── Map Coordinates (Bengaluru) ─────────────── */
-const ORIGIN      = [12.9716, 77.5946]; // "You are here" — current position
-const DEST        = [12.9853, 77.6095]; // Campus Apartment — destination
+const ORIGIN      = [12.9716, 77.5946];
+const DEST        = [12.9853, 77.6095];
 const MAP_CENTER  = [12.9785, 77.6020];
-const NAV_CENTER  = [12.9760, 77.6030];
 
-/*
-  Safe Route:  L-shaped via lit main roads (longer but fully lit)
-  Unsafe Route: Diagonal shortcut through dim alleys
-*/
 const SAFE_COORDS = [
   [12.9716, 77.5946],
-  [12.9716, 77.6000],
   [12.9716, 77.6055],
-  [12.9762, 77.6055],
   [12.9810, 77.6055],
   [12.9853, 77.6095],
 ];
 
 const UNSAFE_COORDS = [
   [12.9716, 77.5946],
-  [12.9748, 77.5972],
   [12.9790, 77.6012],
   [12.9853, 77.6095],
 ];
 
-/* ─────────────── Haversine Distance ─────────────── */
-const calcDist = (coords) => {
-  let d = 0;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const [lat1, lon1] = coords[i];
-    const [lat2, lon2] = coords[i + 1];
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) ** 2;
-    d += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-  return d;
-};
-
-const SAFE_KM    = calcDist(SAFE_COORDS).toFixed(1);
-const UNSAFE_KM  = calcDist(UNSAFE_COORDS).toFixed(1);
-// Walking speed ≈ 5 km/h → 12 min/km
-const SAFE_MIN   = Math.round(parseFloat(SAFE_KM) * 12);
-const UNSAFE_MIN = Math.round(parseFloat(UNSAFE_KM) * 12);
-
-/* ─────────────── Custom Map Markers ─────────────── */
+/* ─────────────── Custom Markers ─────────────── */
 const makeMarker = (color, label) => L.divIcon({
   className: '',
   html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
-    <div style="background:${color};color:${color === '#00D26A' ? '#000' : '#fff'};
-      font-size:9px;font-weight:800;padding:3px 8px;border-radius:5px;
-      white-space:nowrap;font-family:Inter,sans-serif;
-      box-shadow:0 2px 10px ${color}99">${label}</div>
-    <div style="width:2px;height:5px;background:${color}"></div>
-    <div style="width:12px;height:12px;border-radius:50%;
-      background:${color};border:2px solid #fff;
-      box-shadow:0 0 8px ${color}"></div>
+    <div style="background:${color};color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);font-family:Inter,sans-serif">${label}</div>
+    <div style="width:2px;height:4px;background:${color}"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:${color};border:1.5px solid #fff;box-shadow:0 0 6px ${color}"></div>
   </div>`,
-  iconSize: [110, 35],
-  iconAnchor: [55, 35],
+  iconSize: [100, 30],
+  iconAnchor: [50, 30],
 });
 
-const makeHazardMarker = (label) => L.divIcon({
+const makeHazardMarker = (label, color = C.amber) => L.divIcon({
   className: '',
-  html: `<div style="background:#FFC542;color:#000;font-size:8px;font-weight:800;
-    padding:2px 7px;border-radius:4px;white-space:nowrap;
-    font-family:Inter,sans-serif;box-shadow:0 2px 6px rgba(255,197,66,0.6)">⚠ ${label}</div>`,
-  iconSize: [80, 18],
-  iconAnchor: [40, 9],
+  html: `<div style="background:${color};color:#000;font-size:8px;font-weight:800;padding:2px 5px;border-radius:3px;white-space:nowrap;box-shadow:0 2px 4px rgba(0,0,0,0.5);font-family:Inter,sans-serif">⚠️ ${label}</div>`,
+  iconSize: [80, 16],
+  iconAnchor: [40, 8],
 });
 
 const youIcon = L.divIcon({
   className: '',
   html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:none">
-    <div style="width:18px;height:18px;border-radius:50%;
-      background:#8B5CF6;border:3px solid #fff;
-      box-shadow:0 0 14px #8B5CF6,0 0 0 4px rgba(139,92,246,0.25)"></div>
-    <div style="background:#8B5CF6;color:#fff;font-size:7px;font-weight:800;
-      padding:2px 5px;border-radius:3px;white-space:nowrap;
-      margin-top:2px;font-family:Inter,sans-serif">You are here</div>
+    <div style="width:14px;height:14px;border-radius:50%;background:${C.purple};border:2px solid #fff;box-shadow:0 0 10px ${C.purple}"></div>
   </div>`,
-  iconSize: [70, 32],
-  iconAnchor: [9, 9],
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
 });
 
-/* Map center controller — animates when screen changes */
-const MapFlyTo = ({ center, zoom }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo(center, zoom, { duration: 1.2, easeLinearity: 0.25 });
-  }, [center[0], center[1], zoom]);
-  return null;
-};
-
-/* ─────────────── Status Bar ─────────────── */
-const StatusBar = () => (
-  <div style={{
-    height: 44, flexShrink: 0, background: T.bg0,
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '0 18px', position: 'relative',
-  }}>
-    <span style={{ color: T.text0, fontSize: 14, fontWeight: 700, fontFamily: 'Inter' }}>9:41</span>
-    {/* Dynamic Island */}
-    <div style={{
-      position: 'absolute', left: '50%', top: 6,
-      transform: 'translateX(-50%)',
-      width: 100, height: 26, borderRadius: 13, background: '#000',
-    }} />
-    {/* Signals */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-      <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-        {[4, 6, 8, 10].map((h, i) => (
-          <div key={i} style={{ width: 3, height: h, borderRadius: 1, background: i < 3 ? T.text0 : T.text2 }} />
-        ))}
-      </div>
-      {/* WiFi icon */}
-      <svg width="14" height="11" viewBox="0 0 14 11" fill="none" style={{ margin: '0 2px' }}>
-        <path d="M7 2.8c1.9 0 3.6.8 4.8 2.1L13 3.5C11.4 1.4 9.3.3 7 .3S2.6 1.4 1 3.5l1.2 1.4C3.4 3.6 5.1 2.8 7 2.8z" fill={T.text0}/>
-        <path d="M7 5.8c1.2 0 2.3.5 3 1.3l1.2-1.4C10.1 4.6 8.6 3.8 7 3.8S3.9 4.6 2.8 5.7L4 7.1C4.7 6.3 5.8 5.8 7 5.8z" fill={T.text0}/>
-        <circle cx="7" cy="9.5" r="1.7" fill={T.text0}/>
-      </svg>
-      {/* Battery */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <div style={{ width: 20, height: 10, borderRadius: 2.5, border: `1.5px solid ${T.text1}`, padding: 1.5 }}>
-          <div style={{ width: '78%', height: '100%', background: T.green, borderRadius: 1 }} />
-        </div>
-        <div style={{ width: 2, height: 5, background: T.text2, borderRadius: 1, marginLeft: 1 }} />
-      </div>
-    </div>
-  </div>
+const TileLayerDark = () => (
+  <TileLayer
+    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+  />
 );
 
-/* ─────────────── Home Indicator ─────────────── */
-const HomeBar = () => (
-  <div style={{
-    height: 28, flexShrink: 0, background: T.bg0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  }}>
-    <div style={{ width: 120, height: 4, borderRadius: 2, background: T.border }} />
-  </div>
-);
-
-/* ─────────────── Route Option Card ─────────────── */
-const RouteCard = ({ label, badge, badgeRgb, sub, time, km, selected, onClick }) => (
-  <div onClick={onClick} style={{
-    background: selected ? `rgba(${badgeRgb},0.08)` : T.bg1,
-    border: `1.5px solid ${selected ? `rgb(${badgeRgb})` : T.border}`,
-    borderRadius: 12, padding: '9px 12px',
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    cursor: 'pointer', transition: 'all 0.15s ease',
-  }}>
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-        <span style={{ color: T.text0, fontWeight: 700, fontSize: 13, fontFamily: 'Inter' }}>{label}</span>
-        <span style={{
-          fontSize: 9, fontWeight: 800, fontFamily: 'Inter',
-          background: `rgba(${badgeRgb},0.15)`, color: `rgb(${badgeRgb})`,
-          padding: '2px 6px', borderRadius: 20,
-        }}>{badge}</span>
-      </div>
-      <span style={{ color: T.text2, fontSize: 10, fontFamily: 'Inter' }}>{sub}</span>
-    </div>
-    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
-      <div style={{ color: T.text0, fontWeight: 800, fontSize: 15, fontFamily: 'Inter' }}>{time}<span style={{ fontSize: 10, fontWeight: 500, marginLeft: 2 }}>min</span></div>
-      <div style={{ color: T.text2, fontSize: 9, fontFamily: 'Inter' }}>{km} km</div>
-    </div>
-  </div>
-);
-
-/* ═══════════════════════════════════════════════════════
-   MAIN COMPONENT
-═══════════════════════════════════════════════════════ */
+/* ─────────────── Mobile Prototype Component ─────────────── */
 const MobilePrototype = () => {
-  const [screen,       setScreen]       = useState('dashboard');
-  const [route,        setRoute]        = useState('safe');
-  const [hazardModal,  setHazardModal]  = useState(false);
-  const [toast,        setToast]        = useState('');
-  const [hazardCat,    setHazardCat]    = useState('Dim Lighting');
-  const [hazardNote,   setHazardNote]   = useState('');
-  const [pins,         setPins]         = useState([]);
-  const [countdown,    setCountdown]    = useState(3);
+  const [screen, setScreen] = useState('01-splash');
+  const [routeType, setRouteType] = useState('safe');
+  const [activeTab, setActiveTab] = useState('home');
+  const [sosCountdown, setSosCountdown] = useState(3);
+  const [hazards, setHazards] = useState([
+    { id: 1, pos: [12.976, 77.601], label: 'Poor Lighting', type: 'lighting', severity: 'medium' },
+    { id: 2, pos: [12.981, 77.603], label: 'Suspicious Activity', type: 'suspicious', severity: 'high' }
+  ]);
+  const [selectedReportType, setSelectedReportType] = useState('Poor Lighting');
+  const [reportSeverity, setReportSeverity] = useState('Medium');
+  const [reportDesc, setReportDesc] = useState('');
+  const [toast, setToast] = useState('');
 
-  const showToast = (msg) => {
+  const triggerToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
   };
 
+  // SOS Countdown logic
   useEffect(() => {
-    let t;
-    if (screen === 'sos-countdown') {
-      if (countdown > 0) t = setTimeout(() => setCountdown(c => c - 1), 1000);
-      else setScreen('sos-active');
+    let interval;
+    if (screen === '07-sos-trigger') {
+      if (sosCountdown > 0) {
+        interval = setInterval(() => {
+          setSosCountdown(prev => prev - 1);
+        }, 1000);
+      } else {
+        setScreen('08-sos-activated');
+      }
+    } else {
+      setSosCountdown(3);
     }
-    return () => clearTimeout(t);
-  }, [screen, countdown]);
+    return () => clearInterval(interval);
+  }, [screen, sosCountdown]);
 
-  const goNav  = () => { setScreen('navigation'); showToast('🛡 Safe navigation started!'); };
-  const goSOS  = () => { setCountdown(3); setScreen('sos-countdown'); };
-  const abortSOS = () => { setScreen('navigation'); showToast('SOS cancelled.'); };
+  // Bottom Navigation helper
+  const renderBottomNav = (currentTab) => {
+    const tabs = [
+      { id: 'home', icon: <Home size={18} />, label: 'Home', screenId: '04-dashboard' },
+      { id: 'navigate', icon: <Navigation size={18} />, label: 'Navigate', screenId: '05-navigate' },
+      { id: 'sos', icon: <AlertOctagon size={18} />, label: 'SOS', screenId: '07-sos-trigger' },
+      { id: 'report', icon: <AlertTriangle size={18} />, label: 'Report', screenId: '09-hazard-report' },
+      { id: 'profile', icon: <User size={18} />, label: 'Profile', screenId: '12-profile' },
+    ];
 
-  const submitHazard = () => {
-    setPins(prev => [...prev, {
-      id: Date.now(), cat: hazardCat,
-      pos: [
-        ORIGIN[0] + (Math.random() - 0.3) * 0.006,
-        ORIGIN[1] + (Math.random() + 0.3) * 0.005,
-      ],
-    }]);
-    setHazardModal(false);
-    setHazardNote('');
-    showToast(`📍 "${hazardCat}" pinned on map!`);
+    return (
+      <div style={{
+        height: 58,
+        background: C.card,
+        borderTop: `1px solid ${C.border}`,
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingBottom: 4,
+      }}>
+        {tabs.map((t) => {
+          const isActive = currentTab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => {
+                setActiveTab(t.id);
+                setScreen(t.screenId);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isActive ? C.purple : C.textS,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 3,
+                cursor: 'pointer',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: 10,
+                fontWeight: isActive ? 600 : 400,
+                flex: 1,
+              }}
+            >
+              <div style={{
+                padding: '4px 12px',
+                borderRadius: 14,
+                background: isActive ? C.purpleD : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {t.icon}
+              </div>
+              <span>{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
   };
 
-  /* Shared map tile — CartoDB Dark Matter matches our dark theme perfectly */
-  const TILE = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-  const ATTR = '© <a href="https://www.openstreetmap.org/copyright">OSM</a> © <a href="https://carto.com">CARTO</a>';
-  const mapStyle = { height: '100%', width: '100%' };
-
-  /* Phone dimensions — fixed for the 1920×912 viewport */
-  const PH = 760; // phone height
-  const PW = 360; // phone width
+  // Status Bar Mockup
+  const renderStatusBar = () => (
+    <div style={{
+      height: 38,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '0 18px',
+      fontSize: 12,
+      fontWeight: 600,
+      color: C.textS,
+      background: C.bg,
+      userSelect: 'none',
+    }}>
+      <span>9:41</span>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span>📶</span>
+        <span>🔋</span>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{
-      display: 'flex', justifyContent: 'center', alignItems: 'center',
-      width: '100%', height: '100%',
+      display: 'flex',
+      width: '100%',
+      maxWidth: 1100,
+      height: 860,
+      background: '#07090e',
+      borderRadius: 24,
+      border: '1px solid #1c2130',
+      boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+      overflow: 'hidden',
+      fontFamily: 'Inter, sans-serif',
+      color: C.text,
     }}>
-
-      {/* ── Phone Shell ── */}
+      {/* ── LEFT PRESENTATION SIDEBAR (For easy jumping during presentation/jury review) ── */}
       <div style={{
-        width: PW, height: PH,
-        borderRadius: 48,
-        border: '9px solid #12151f',
-        boxShadow: '0 0 0 1.5px #090b14, 0 40px 100px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.05)',
-        overflow: 'hidden',
-        display: 'flex', flexDirection: 'column',
-        background: T.bg0,
-        position: 'relative',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        width: 320,
+        background: '#0e1118',
+        borderRight: '1px solid #1c2130',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 24,
+        overflowY: 'auto',
       }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <Shield size={24} color={C.purple} />
+          <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>SafeRoute UI</h2>
+        </div>
+        <p style={{ fontSize: 12, color: C.textS, lineHeight: 1.5, marginBottom: 20 }}>
+          Present safety workflow screens directly to the jury using this jump panel, or interact with the mockup container on the right.
+        </p>
 
-        {/* ── Global keyframes + leaflet overrides ── */}
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        <h3 style={{ fontSize: 10, fontWeight: 700, color: C.textM, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+          Jump to Design Screen
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {[
+            { id: '01-splash', label: '01. Splash Screen', cat: 'entry' },
+            { id: '02-onboarding', label: '02. Onboarding Intro', cat: 'entry' },
+            { id: '03-login', label: '03. Login / Sign Up', cat: 'entry' },
+            { id: '04-dashboard', label: '04. Dashboard (Home)', cat: 'core' },
+            { id: '05-navigate', label: '05. Route Planner', cat: 'core' },
+            { id: '06-active-nav', label: '06. Active Turn-by-Turn', cat: 'core' },
+            { id: '07-sos-trigger', label: '07. SOS Countdowns', cat: 'sos' },
+            { id: '08-sos-activated', label: '08. SOS Alert Transmitted', cat: 'sos' },
+            { id: '09-hazard-report', label: '09. Report Hazard Form', cat: 'hazard' },
+            { id: '10-community-map', label: '10. Community Safety Map', cat: 'hazard' },
+            { id: '11-summary', label: '11. Route Summary Metrics', cat: 'core' },
+            { id: '12-profile', label: '12. Profile & Settings', cat: 'core' },
+          ].map(s => {
+            const isCurrent = screen === s.id;
+            let themeColor = C.purple;
+            if (s.cat === 'sos') themeColor = C.red;
+            if (s.cat === 'hazard') themeColor = C.amber;
+            if (s.cat === 'core' && s.id !== '12-profile') themeColor = C.green;
 
-          @keyframes sosPulse {
-            0%   { box-shadow: 0 0 0 0 rgba(255,61,90,0.8); }
-            70%  { box-shadow: 0 0 0 20px rgba(255,61,90,0); }
-            100% { box-shadow: 0 0 0 0 rgba(255,61,90,0); }
-          }
-          @keyframes dotPing {
-            0%,100%{ box-shadow:0 0 0 0 rgba(139,92,246,0.7); }
-            50%    { box-shadow:0 0 0 10px rgba(139,92,246,0); }
-          }
-          @keyframes sosRing {
-            from { transform:scale(0.8); opacity:1; }
-            to   { transform:scale(1.8); opacity:0; }
-          }
-          @keyframes strobeRed {
-            0%,100%{ background:rgba(255,61,90,0.05); }
-            50%    { background:rgba(255,61,90,0.15); }
-          }
-          @keyframes slideUp {
-            from { transform:translateY(100%); }
-            to   { transform:translateY(0); }
-          }
-          @keyframes fadeIn {
-            from { opacity:0; transform:translateY(-8px); }
-            15%  { opacity:1; transform:translateY(0); }
-            80%  { opacity:1; }
-            to   { opacity:0; }
-          }
+            return (
+              <button
+                key={s.id}
+                onClick={() => {
+                  setScreen(s.id);
+                  if (s.id === '04-dashboard') setActiveTab('home');
+                  if (s.id === '05-navigate') setActiveTab('navigate');
+                  if (s.id === '07-sos-trigger') setActiveTab('sos');
+                  if (s.id === '09-hazard-report') setActiveTab('report');
+                  if (s.id === '12-profile') setActiveTab('profile');
+                }}
+                style={{
+                  background: isCurrent ? `${themeColor}20` : '#131720',
+                  border: `1.5px solid ${isCurrent ? themeColor : 'transparent'}`,
+                  color: isCurrent ? C.white : C.text,
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  textAlign: 'left',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <span>{s.label}</span>
+                {isCurrent && <div style={{ width: 6, height: 6, borderRadius: '50%', background: themeColor }} />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-          /* Leaflet overrides — hide controls that look bad inside phone frame */
-          .leaflet-control-zoom   { display:none !important; }
-          .leaflet-control-attribution {
-            font-size: 7px !important;
-            opacity: 0.35 !important;
-            background: rgba(0,0,0,0.5) !important;
-            color: rgba(255,255,255,0.4) !important;
-          }
-          /* Pinch / touch scroll enabled */
-          .leaflet-container { touch-action: none; }
-        `}</style>
-
-        <StatusBar />
-
-        {/* ── TOAST notification ── */}
+      {/* ── RIGHT MOBILE PREVIEW CONTAINER ── */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#090b10',
+        position: 'relative',
+      }}>
+        {/* Toast Toast notification */}
         {toast && (
           <div style={{
-            position: 'absolute', top: 50, left: 12, right: 12, zIndex: 1500,
-            background: T.bg3, border: `1px solid ${T.green}`,
-            borderRadius: 12, padding: '9px 13px',
-            display: 'flex', alignItems: 'center', gap: 8,
-            boxShadow: `0 8px 28px rgba(0,210,106,0.3)`,
-            animation: 'fadeIn 3s ease forwards',
+            position: 'absolute',
+            top: 60,
+            zIndex: 1000,
+            background: C.card2,
+            border: `1px solid ${C.purple}`,
+            borderRadius: 20,
+            padding: '8px 16px',
+            color: C.text,
+            fontSize: 12,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: '0 8px 30px rgba(99,102,241,0.3)',
           }}>
-            <CheckCircle2 size={15} color={T.green} />
-            <span style={{ color: T.text0, fontSize: 12, fontWeight: 600 }}>{toast}</span>
+            <CheckCircle2 size={14} color={C.green} />
+            <span>{toast}</span>
           </div>
         )}
 
-        {/* ═════════════════════════════════════
-            SCREEN 1 — ROUTE SELECTION
-        ═════════════════════════════════════ */}
-        {screen === 'dashboard' && (
+        {/* 📱 Mobile Device Frame Mockup */}
+        <div style={{
+          width: 390,
+          height: 844,
+          background: C.bg,
+          borderRadius: 44,
+          border: '10px solid #1C2130',
+          boxShadow: '0 30px 70px rgba(0,0,0,0.8)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+        }}>
+          {renderStatusBar()}
+
+          {/* ───────────────── SCREEN CONTROLLER ───────────────── */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-
-            {/* App header */}
-            <div style={{
-              padding: '8px 14px', flexShrink: 0,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              background: T.bg0, borderBottom: `1px solid ${T.border}`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <Shield size={16} color={T.purple} />
-                <span style={{ color: T.text0, fontSize: 15, fontWeight: 800 }}>SafeRoute</span>
-              </div>
-              <div style={{
-                width: 30, height: 30, borderRadius: 15,
-                background: `linear-gradient(135deg, ${T.purple}, #e879f9)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 10, fontWeight: 900,
-              }}>ER</div>
-            </div>
-
-            {/* Destination strip */}
-            <div style={{
-              padding: '7px 14px', flexShrink: 0,
-              background: T.bg1, borderBottom: `1px solid ${T.border}`,
-              display: 'flex', alignItems: 'center', gap: 9,
-            }}>
-              <div style={{ width: 9, height: 9, borderRadius: 2, background: T.green, boxShadow: `0 0 8px ${T.green}`, flexShrink: 0 }} />
-              <span style={{ color: T.text0, fontWeight: 700, fontSize: 12, flex: 1 }}>Campus Apartment (Dorm)</span>
-              <span style={{ color: T.text2, fontSize: 10, background: T.bg2, borderRadius: 12, padding: '2px 8px', border: `1px solid ${T.border}` }}>Change</span>
-            </div>
-
-            {/* ── LIVE MAP — fully scrollable & pannable ── */}
-            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-              <MapContainer
-                center={MAP_CENTER}
-                zoom={15}
-                style={mapStyle}
-                zoomControl={false}
-                scrollWheelZoom={true}
-                dragging={true}
-                touchZoom={true}
-                doubleClickZoom={true}
-              >
-                <TileLayer url={TILE} attribution={ATTR} />
-
-                {/* Safe route: bright green solid line + glow */}
-                <Polyline
-                  positions={SAFE_COORDS}
-                  pathOptions={{ color: T.green, weight: 16, opacity: 0.12, lineCap: 'round', lineJoin: 'round' }}
-                />
-                <Polyline
-                  positions={SAFE_COORDS}
-                  pathOptions={{ color: T.green, weight: 5, opacity: route === 'safe' ? 1 : 0.55, lineCap: 'round', lineJoin: 'round' }}
-                />
-
-                {/* Unsafe route: red dashed */}
-                <Polyline
-                  positions={UNSAFE_COORDS}
-                  pathOptions={{ color: T.red, weight: 4, opacity: route === 'fastest' ? 0.95 : 0.45, dashArray: '10 7', lineCap: 'round' }}
-                />
-
-                {/* Destination marker */}
-                <Marker position={DEST}   icon={makeMarker(T.green, '📍 Campus Apt')} />
-
-                {/* Origin marker */}
-                <Marker position={ORIGIN} icon={youIcon} />
-
-                {/* Dim alley warning on unsafe route */}
-                <Marker
-                  position={[12.9775, 77.5995]}
-                  icon={makeHazardMarker('Dim Alley')}
-                />
-
-                {/* User hazard reports */}
-                {pins.map(p => (
-                  <Marker key={p.id} position={p.pos} icon={makeHazardMarker(p.cat.split(' ')[0])} />
-                ))}
-              </MapContainer>
-
-              {/* Route legend overlay */}
-              <div style={{
-                position: 'absolute', bottom: 10, left: 10, zIndex: 800,
-                display: 'flex', flexDirection: 'column', gap: 5,
-                pointerEvents: 'none',
-              }}>
-                <div style={{
-                  background: 'rgba(11,14,20,0.88)', border: `1px solid ${T.green}`,
-                  borderRadius: 8, padding: '5px 10px',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  backdropFilter: 'blur(10px)',
-                }}>
-                  <div style={{ width: 16, height: 3, background: T.green, borderRadius: 2 }} />
-                  <span style={{ color: T.green, fontSize: 9, fontWeight: 700 }}>Safe: {SAFE_KM} km · {SAFE_MIN} min</span>
+            
+            {/* 1. Splash Screen */}
+            {screen === '01-splash' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '40px 24px 60px' }}>
+                <div />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                  <div style={{
+                    width: 90, height: 90, borderRadius: 28, background: C.purple,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: `0 8px 30px rgba(99, 102, 241, 0.4)`
+                  }}>
+                    <Shield size={48} color={C.white} />
+                  </div>
+                  <h1 style={{ fontSize: 32, fontWeight: 900, color: C.white, margin: 0 }}>SafeRoute</h1>
+                  <span style={{ fontSize: 14, color: C.textS, textAlign: 'center' }}>Navigate Safely. Stay Protected.</span>
                 </div>
-                <div style={{
-                  background: 'rgba(11,14,20,0.88)', border: `1px solid ${T.red}`,
-                  borderRadius: 8, padding: '5px 10px',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  backdropFilter: 'blur(10px)',
-                }}>
-                  <div style={{ width: 16, height: 0, border: `2px dashed ${T.red}`, borderRadius: 1 }} />
-                  <span style={{ color: T.red, fontSize: 9, fontWeight: 700 }}>Unsafe: {UNSAFE_KM} km · {UNSAFE_MIN} min</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 10px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ color: C.purple, fontSize: 18, fontWeight: 800 }}>2.4M+</div>
+                      <div style={{ color: C.textS, fontSize: 10 }}>Users Protected</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ color: C.green, fontSize: 18, fontWeight: 800 }}>99.8%</div>
+                      <div style={{ color: C.textS, fontSize: 10 }}>AI Accuracy</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ color: C.amber, fontSize: 18, fontWeight: 800 }}>4.9 ★</div>
+                      <div style={{ color: C.textS, fontSize: 10 }}>App Rating</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setScreen('02-onboarding')}
+                    style={{
+                      background: C.purple, border: 'none', color: C.white,
+                      height: 52, borderRadius: 26, fontSize: 16, fontWeight: 700,
+                      cursor: 'pointer', boxShadow: '0 4px 16px rgba(99,102,241,0.3)'
+                    }}
+                  >
+                    Get Started
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* ── Route selection + CTA ── */}
-            <div style={{
-              flexShrink: 0, background: T.bg0,
-              padding: '10px 12px 10px',
-              borderTop: `1px solid ${T.border}`,
-              display: 'flex', flexDirection: 'column', gap: 6,
-            }}>
-              <div style={{ color: T.text2, fontSize: 9, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 1 }}>Choose Route</div>
-
-              <RouteCard
-                label="SafeRoute" badge="94% Safe" badgeRgb="0,210,106"
-                sub="💡 Lit streets · Open stores · CCTV cameras"
-                time={SAFE_MIN} km={SAFE_KM}
-                selected={route === 'safe'}
-                onClick={() => setRoute('safe')}
-              />
-              <RouteCard
-                label="Shortest Route" badge="38% Safe" badgeRgb="255,61,90"
-                sub="⚠ Dim alleys · No CCTV · Low footfall"
-                time={UNSAFE_MIN} km={UNSAFE_KM}
-                selected={route === 'fastest'}
-                onClick={() => setRoute('fastest')}
-              />
-
-              <button onClick={goNav} style={{
-                width: '100%', padding: '12px 0', borderRadius: 12,
-                border: 'none', cursor: 'pointer',
-                fontWeight: 900, fontSize: 13, fontFamily: 'Inter', marginTop: 2,
-                background: route === 'safe' ? T.green : T.red,
-                color: route === 'safe' ? '#000' : '#fff',
-                boxShadow: route === 'safe'
-                  ? `0 4px 20px rgba(0,210,106,0.45)`
-                  : `0 4px 20px rgba(255,61,90,0.45)`,
-                transition: 'all 0.2s ease',
-              }}>
-                {route === 'safe' ? '🛡 Start Safe Navigation' : '⚡ Start Anyway (Risky)'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════
-            SCREEN 2 — ACTIVE NAVIGATION
-        ═════════════════════════════════════ */}
-        {screen === 'navigation' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-
-            {/* Turn-by-turn HUD */}
-            <div style={{
-              flexShrink: 0, background: T.bg0,
-              padding: '8px 12px', borderBottom: `1px solid ${T.border}`,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}>
-              <button onClick={() => setScreen('dashboard')} style={{
-                background: T.bg2, border: 'none', width: 32, height: 32, borderRadius: 16,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', flexShrink: 0,
-              }}>
-                <ChevronLeft size={16} color={T.text1} />
-              </button>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 1 }}>
-                  <Navigation size={10} color={T.green} />
-                  <span style={{ color: T.green, fontSize: 9, fontWeight: 700, letterSpacing: 0.5 }}>SAFE ROUTE · {SAFE_KM} km</span>
+            {/* 2. Onboarding */}
+            {screen === '02-onboarding' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 24px 40px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setScreen('03-login')} style={{ background: 'none', border: 'none', color: C.textS, fontSize: 14, cursor: 'pointer' }}>Skip</button>
                 </div>
-                <span style={{ color: T.text0, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                  Turn right in 200m → Cedar Ave
-                </span>
-              </div>
-              <div style={{ background: T.bg2, borderRadius: 8, padding: '3px 8px', textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ color: T.text0, fontWeight: 800, fontSize: 13, fontFamily: 'Inter' }}>{SAFE_MIN}</div>
-                <div style={{ color: T.text2, fontSize: 8 }}>min</div>
-              </div>
-            </div>
-
-            {/* ── Navigation MAP ── */}
-            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-              <MapContainer
-                center={NAV_CENTER}
-                zoom={16}
-                style={mapStyle}
-                zoomControl={false}
-                scrollWheelZoom={true}
-                dragging={true}
-                touchZoom={true}
-              >
-                <TileLayer url={TILE} attribution={ATTR} />
-
-                {/* Active safe route — bright and bold */}
-                <Polyline positions={SAFE_COORDS}
-                  pathOptions={{ color: T.green, weight: 18, opacity: 0.12, lineCap: 'round', lineJoin: 'round' }} />
-                <Polyline positions={SAFE_COORDS}
-                  pathOptions={{ color: T.green, weight: 6, opacity: 1, lineCap: 'round', lineJoin: 'round' }} />
-
-                {/* Unsafe dimmed in background */}
-                <Polyline positions={UNSAFE_COORDS}
-                  pathOptions={{ color: T.red, weight: 2.5, opacity: 0.35, dashArray: '8 6' }} />
-
-                {/* Markers */}
-                <Marker position={DEST}   icon={makeMarker(T.green, '📍 Campus Apt')} />
-                <Marker position={ORIGIN} icon={youIcon} />
-
-                {/* Hazard pins */}
-                {pins.map(p => (
-                  <Marker key={p.id} position={p.pos} icon={makeHazardMarker(p.cat.split(' ')[0])} />
-                ))}
-              </MapContainer>
-
-              {/* Safety badge */}
-              <div style={{
-                position: 'absolute', left: 10, bottom: 10, zIndex: 800,
-                background: 'rgba(11,14,20,0.88)', border: `1px solid ${T.green}`,
-                borderRadius: 10, padding: '5px 10px',
-                display: 'flex', alignItems: 'center', gap: 6,
-                backdropFilter: 'blur(10px)',
-                pointerEvents: 'none',
-              }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: T.green, boxShadow: `0 0 6px ${T.green}` }} />
-                <span style={{ color: T.text1, fontSize: 10, fontWeight: 600 }}>94% Safety Corridor</span>
-              </div>
-            </div>
-
-            {/* Bottom controls */}
-            <div style={{
-              flexShrink: 0, background: T.bg0,
-              padding: '10px 14px', borderTop: `1px solid ${T.border}`,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <button onClick={() => setHazardModal(true)} style={{
-                background: T.bg2, border: `1px solid ${T.border}`,
-                color: T.text1, padding: '9px 14px', borderRadius: 22,
-                fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center',
-                gap: 5, cursor: 'pointer',
-              }}>
-                <AlertTriangle size={12} color={T.amber} />Report
-              </button>
-
-              <button onClick={goSOS} style={{
-                width: 60, height: 60, borderRadius: 30,
-                background: T.red, border: '3px solid rgba(255,61,90,0.3)',
-                color: '#fff', fontWeight: 900, fontSize: 13, cursor: 'pointer',
-                animation: 'sosPulse 1.5s infinite', fontFamily: 'Inter',
-              }}>SOS</button>
-
-              <button onClick={() => showToast('📍 Live location shared!')} style={{
-                background: T.bg2, border: `1px solid ${T.border}`,
-                color: T.text1, padding: '9px 14px', borderRadius: 22,
-                fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center',
-                gap: 5, cursor: 'pointer',
-              }}>
-                <Send size={12} color={T.blue} />Share
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ═════════════════════════════════════
-            SCREEN 3 — SOS COUNTDOWN
-        ═════════════════════════════════════ */}
-        {screen === 'sos-countdown' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, animation: 'strobeRed 1s infinite' }}>
-            {/* Header */}
-            <div style={{ padding: '9px 14px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${T.border}` }}>
-              <button onClick={abortSOS} style={{ background: T.bg2, border: 'none', width: 32, height: 32, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                <ChevronLeft size={16} color={T.text1} />
-              </button>
-              <span style={{ color: T.red, fontWeight: 800, fontSize: 14 }}>🚨 SOS Alert</span>
-            </div>
-
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 22px' }}>
-              {/* Countdown rings */}
-              <div style={{ position: 'relative', width: 140, height: 140, marginBottom: 24 }}>
-                {[1, 2, 3].map(i => (
-                  <div key={i} style={{
-                    position: 'absolute', inset: -i * 15, borderRadius: '50%',
-                    border: `1.5px solid ${T.red}`, opacity: 0.08 + i * 0.04,
-                  }} />
-                ))}
-                <div style={{
-                  position: 'absolute', inset: -10, borderRadius: '50%',
-                  border: `2px solid ${T.red}`,
-                  animation: 'sosRing 1.2s ease-out infinite',
-                }} />
-                <div style={{
-                  position: 'absolute', inset: 0, borderRadius: '50%',
-                  background: T.redDim, border: `3px solid ${T.red}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: 60, fontWeight: 900, color: T.red, lineHeight: 1, fontFamily: 'Inter' }}>{countdown}</span>
-                </div>
-              </div>
-
-              <h3 style={{ color: T.text0, fontSize: 18, fontWeight: 800, margin: '0 0 6px', textAlign: 'center', fontFamily: 'Inter' }}>Sending SOS Alert</h3>
-              <p style={{ color: T.text2, fontSize: 11, textAlign: 'center', margin: '0 0 20px', lineHeight: 1.5, fontFamily: 'Inter' }}>
-                Location sent to all emergency contacts in <strong style={{ color: T.red }}>{countdown}s</strong>
-              </p>
-
-              {/* Status checklist */}
-              <div style={{ width: '100%', background: T.bg1, borderRadius: 12, padding: '12px 14px', border: `1px solid ${T.border}`, marginBottom: 18 }}>
-                {[
-                  { label: 'Getting GPS coordinates',  done: true },
-                  { label: 'Composing emergency SMS',   done: countdown < 2 },
-                  { label: 'Alerting campus security',  done: false },
-                ].map((s, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 2 ? 10 : 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 24 }}>
+                  <div style={{
+                    width: 200, height: 200, borderRadius: 100, background: '#131720',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #1c2130',
+                    position: 'relative'
+                  }}>
                     <div style={{
-                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                      background: s.done ? T.green : T.bg3,
+                      width: 140, height: 140, borderRadius: 70, background: C.purpleD,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      {s.done && <span style={{ color: '#000', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                      <Zap size={54} color={C.purple} />
                     </div>
-                    <span style={{ color: s.done ? T.text0 : T.text2, fontSize: 11 }}>{s.label}</span>
                   </div>
-                ))}
+                  <div style={{ background: C.purpleD, padding: '4px 12px', borderRadius: 12, fontSize: 11, fontWeight: 700, color: C.purple }}>01 / 03</div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: C.white, margin: 0 }}>AI-Powered Risk Assessment</h2>
+                  <p style={{ fontSize: 14, color: C.textS, margin: 0, lineHeight: 1.6 }}>
+                    Our AI analyzes crime data, street lighting, pedestrian flow, and crowd safety to compute optimal travel paths.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ width: 16, height: 6, borderRadius: 3, background: C.purple }} />
+                    <div style={{ width: 6, height: 6, borderRadius: 3, background: C.border }} />
+                    <div style={{ width: 6, height: 6, borderRadius: 3, background: C.border }} />
+                  </div>
+                  <button
+                    onClick={() => setScreen('03-login')}
+                    style={{
+                      background: C.purple, border: 'none', color: C.white,
+                      height: 52, width: '100%', borderRadius: 26, fontSize: 16, fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
+            )}
 
-              <button onClick={abortSOS} style={{
-                width: '100%', padding: '12px 0', borderRadius: 12,
-                background: 'transparent', border: `1.5px solid ${T.red}`,
-                color: T.red, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: 'Inter',
-              }}>Hold to Cancel Alert</button>
-            </div>
-          </div>
-        )}
+            {/* 3. Login Screen */}
+            {screen === '03-login' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 32 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, margin: '40px 0 30px' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: C.purple, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Shield size={24} color={C.white} />
+                  </div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: C.white, margin: 0 }}>Welcome Back</h2>
+                  <span style={{ fontSize: 14, color: C.textS }}>Sign in to continue commuting safely</span>
+                </div>
 
-        {/* ═════════════════════════════════════
-            SCREEN 4 — SOS ACTIVE
-        ═════════════════════════════════════ */}
-        {screen === 'sos-active' && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, animation: 'strobeRed 0.6s infinite' }}>
-            <div style={{ padding: '10px 14px', textAlign: 'center', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
-              <span style={{ color: T.red, fontWeight: 900, fontSize: 14, letterSpacing: 1, fontFamily: 'Inter' }}>🚨 SOS ACTIVE</span>
-            </div>
-
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
-              <div style={{ width: 66, height: 66, borderRadius: 33, background: T.redDim, border: `2px solid ${T.red}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-                <Volume2 size={30} color={T.red} />
-              </div>
-              <h3 style={{ color: T.red, fontSize: 18, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 2, margin: '0 0 6px', fontFamily: 'Inter' }}>Alert Sent</h3>
-              <p style={{ color: T.text2, fontSize: 11, textAlign: 'center', margin: '0 0 18px', lineHeight: 1.6 }}>
-                Audio siren is active. Emergency contacts received your live GPS location.
-              </p>
-
-              {/* Contact rows */}
-              <div style={{ width: '100%', background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden', marginBottom: 16 }}>
-                {[
-                  { name: 'Mom',          phone: '+91 98XX XXXXX', emoji: '👩' },
-                  { name: 'Roommate',     phone: '+91 87XX XXXXX', emoji: '🏠' },
-                  { name: 'Campus Police',phone: '100',            emoji: '🚔' },
-                ].map((c, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
-                    borderBottom: i < 2 ? `1px solid ${T.border}` : 'none',
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+                  <button style={{
+                    background: C.card, border: `1px solid ${C.border}`, color: C.text,
+                    height: 50, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: 12, fontWeight: 600, cursor: 'pointer'
                   }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 16, background: T.bg3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{c.emoji}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: T.text0, fontSize: 12, fontWeight: 600 }}>{c.name}</div>
-                      <div style={{ color: T.text2, fontSize: 10 }}>{c.phone}</div>
+                    <span style={{ fontSize: 16 }}>G</span> Continue with Google
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, height: 1, background: C.border }} />
+                    <span style={{ fontSize: 12, color: C.textM }}>or</span>
+                    <div style={{ flex: 1, height: 1, background: C.border }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: C.textS, display: 'block', marginBottom: 6 }}>EMAIL ADDRESS</label>
+                    <input type="text" defaultValue="sahil@example.com" style={{
+                      width: '100%', height: 48, background: C.card, border: `1px solid ${C.purple}`,
+                      borderRadius: 10, padding: '0 14px', color: C.white, fontSize: 14, boxSizing: 'border-box'
+                    }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: C.textS, display: 'block', marginBottom: 6 }}>PASSWORD</label>
+                    <input type="password" defaultValue="password123" style={{
+                      width: '100%', height: 48, background: C.card, border: `1px solid ${C.border}`,
+                      borderRadius: 10, padding: '0 14px', color: C.white, fontSize: 14, boxSizing: 'border-box'
+                    }} />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setScreen('04-dashboard');
+                    setActiveTab('home');
+                    triggerToast('Sign-in successful!');
+                  }}
+                  style={{
+                    background: C.purple, border: 'none', color: C.white,
+                    height: 50, borderRadius: 25, fontSize: 15, fontWeight: 700, cursor: 'pointer'
+                  }}
+                >
+                  Sign In
+                </button>
+              </div>
+            )}
+
+            {/* 4. Dashboard */}
+            {screen === '04-dashboard' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* Header */}
+                <div style={{ padding: '16px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: 12, color: C.textS }}>Good Evening,</span>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, color: C.white, margin: 0 }}>Sahil Kumar</h3>
+                  </div>
+                  <div style={{ width: 36, height: 36, borderRadius: 18, background: C.purple, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>SK</div>
+                </div>
+
+                {/* Risk Level Badge */}
+                <div style={{ padding: '0 20px 16px' }}>
+                  <div style={{
+                    background: C.card, border: '1px solid #1c2130', borderRadius: 16, padding: 14,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: `4px solid ${C.green}`
+                  }}>
+                    <div>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: C.textS, letterSpacing: 1 }}>CURRENT RISK LEVEL</span>
+                      <h4 style={{ fontSize: 20, fontWeight: 900, color: C.green, margin: '2px 0 0' }}>LOW RISK ZONE</h4>
                     </div>
-                    <div style={{ background: T.greenDim, border: `1px solid ${T.green}`, borderRadius: 20, padding: '3px 8px' }}>
-                      <span style={{ color: T.green, fontSize: 9, fontWeight: 800 }}>✓ Notified</span>
+                    <div style={{ background: C.greenD, color: C.green, padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>OK</div>
+                  </div>
+                </div>
+
+                {/* Mini Interactive Leaflet Map */}
+                <div style={{ flex: 1, position: 'relative', margin: '0 20px', borderRadius: 16, overflow: 'hidden', border: '1px solid #1c2130', minHeight: 160 }}>
+                  <MapContainer key="dashboard-map" center={MAP_CENTER} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                    <TileLayerDark />
+                    <Marker position={ORIGIN} icon={youIcon} />
+                    <Marker position={DEST} icon={makeMarker(C.green, 'Campus Apt')} />
+                  </MapContainer>
+                  <div style={{ position: 'absolute', bottom: 10, left: 10, zIndex: 1000, background: C.bg, padding: '4px 10px', borderRadius: 8, fontSize: 10, border: '1px solid #1c2130' }}>
+                    📍 MG Road, Bengaluru
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div style={{ padding: '20px 20px 10px' }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textS, margin: '0 0 12px' }}>QUICK ACTIONS</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    <button
+                      onClick={() => { setScreen('05-navigate'); setActiveTab('navigate'); }}
+                      style={{
+                        background: C.card, border: '1px solid #1c2130', borderRadius: 12, padding: 12,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', color: C.text
+                      }}
+                    >
+                      <Navigation size={20} color={C.purple} />
+                      <span style={{ fontSize: 11, fontWeight: 600 }}>Navigate</span>
+                    </button>
+                    <button
+                      onClick={() => { setScreen('07-sos-trigger'); setActiveTab('sos'); }}
+                      style={{
+                        background: C.card, border: '1px solid #1c2130', borderRadius: 12, padding: 12,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', color: C.text
+                      }}
+                    >
+                      <AlertOctagon size={20} color={C.red} />
+                      <span style={{ fontSize: 11, fontWeight: 600 }}>SOS Alert</span>
+                    </button>
+                    <button
+                      onClick={() => { setScreen('09-hazard-report'); setActiveTab('report'); }}
+                      style={{
+                        background: C.card, border: '1px solid #1c2130', borderRadius: 12, padding: 12,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', color: C.text
+                      }}
+                    >
+                      <AlertTriangle size={20} color={C.amber} />
+                      <span style={{ fontSize: 11, fontWeight: 600 }}>Report</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recent Routes */}
+                <div style={{ padding: '0 20px 16px' }}>
+                  <h4 style={{ fontSize: 13, fontWeight: 700, color: C.textS, margin: '0 0 8px' }}>RECENT COMMUTES</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ background: C.card, borderRadius: 10, padding: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700 }}>College Dorm ➔ Central Tech Hub</div>
+                        <div style={{ fontSize: 10, color: C.textS }}>Last traveled: 2 hours ago</div>
+                      </div>
+                      <div style={{ color: C.green, fontSize: 12, fontWeight: 700 }}>98% Safe</div>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {renderBottomNav('home')}
               </div>
+            )}
 
-              <button onClick={() => { setScreen('dashboard'); showToast('SOS resolved. Stay safe! ✅'); }} style={{
-                width: '100%', padding: '12px 0', borderRadius: 12,
-                background: T.green, border: 'none', color: '#000',
-                fontWeight: 900, fontSize: 13, cursor: 'pointer', fontFamily: 'Inter',
-                boxShadow: `0 5px 20px rgba(0,210,106,0.45)`,
-              }}>✓ I Am Safe — Dismiss Alert</button>
-            </div>
+            {/* 5. Navigate (Route Selection) */}
+            {screen === '05-navigate' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* Search Bar Panel */}
+                <div style={{ padding: '12px 20px', background: C.card, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 4, background: C.green }} />
+                    <input type="text" readOnly value="My Current Location (GPS)" style={{ flex: 1, background: C.card2, border: 'none', borderRadius: 8, height: 36, padding: '0 12px', color: C.text, fontSize: 13 }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 4, background: C.purple }} />
+                    <input type="text" readOnly value="Campus Apartment (Dorm)" style={{ flex: 1, background: C.card2, border: 'none', borderRadius: 8, height: 36, padding: '0 12px', color: C.text, fontSize: 13 }} />
+                  </div>
+                </div>
+
+                {/* Map Route Visualizer */}
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <MapContainer key="navigate-routes-map" center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                    <TileLayerDark />
+                    
+                    {/* Safe Corridor route */}
+                    <Polyline positions={SAFE_COORDS} pathOptions={{ color: C.green, weight: 6, opacity: routeType === 'safe' ? 1.0 : 0.4 }} />
+                    {/* Alternate Unsafe shortcut route */}
+                    <Polyline positions={UNSAFE_COORDS} pathOptions={{ color: C.red, weight: 5, opacity: routeType === 'unsafe' ? 1.0 : 0.4, dashArray: '10 5' }} />
+
+                    <Marker position={ORIGIN} icon={youIcon} />
+                    <Marker position={DEST} icon={makeMarker(C.green, 'Campus Dorm')} />
+
+                    {/* Hazard warning flag on unsafe path */}
+                    {routeType === 'unsafe' && (
+                      <Marker position={[12.979, 77.601]} icon={makeHazardMarker('High Crime Zone', C.red)} />
+                    )}
+                  </MapContainer>
+
+                  {/* Quick toggle banner */}
+                  <div style={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 1000, display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => setRouteType('safe')}
+                      style={{
+                        flex: 1, height: 36, borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        background: routeType === 'safe' ? C.green : C.card, color: routeType === 'safe' ? '#000' : C.text
+                      }}
+                    >
+                      🛡️ Safe Path
+                    </button>
+                    <button
+                      onClick={() => setRouteType('unsafe')}
+                      style={{
+                        flex: 1, height: 36, borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                        background: routeType === 'unsafe' ? C.red : C.card, color: routeType === 'unsafe' ? C.white : C.text
+                      }}
+                    >
+                      ⚠️ Alley Shortcut
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bottom Route Details Card */}
+                <div style={{ padding: '16px 20px', background: C.bg, borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
+                        {routeType === 'safe' ? 'SafeRoute Corridor' : 'Unsafe Dark Shortcut'}
+                      </h4>
+                      <span style={{ fontSize: 12, color: C.textS }}>
+                        {routeType === 'safe' ? 'Well-lit • Active Pedestrians • CCTV' : 'Dim Alley • Unmonitored • Isolated'}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: routeType === 'safe' ? C.green : C.red }}>
+                        {routeType === 'safe' ? '98% Safe' : '38% Risky'}
+                      </div>
+                      <span style={{ fontSize: 11, color: C.textS }}>
+                        {routeType === 'safe' ? '24 Min • 3.2 km' : '14 Min • 1.8 km'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setScreen('06-active-nav')}
+                    style={{
+                      width: '100%', height: 50, borderRadius: 25, border: 'none',
+                      background: routeType === 'safe' ? C.green : C.red,
+                      color: routeType === 'safe' ? '#000' : C.white,
+                      fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                      boxShadow: `0 4px 15px ${routeType === 'safe' ? C.greenD : C.redD}`
+                    }}
+                  >
+                    Start Navigation
+                  </button>
+                </div>
+
+                {renderBottomNav('navigate')}
+              </div>
+            )}
+
+            {/* 6. Active Navigation */}
+            {screen === '06-active-nav' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* HUD Banner */}
+                <div style={{
+                  padding: '12px 18px', background: C.card, borderBottom: `1px solid ${C.border}`,
+                  display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Navigation size={18} color={C.green} style={{ transform: 'rotate(45deg)' }} />
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>Turn left on MG Road</h4>
+                      <span style={{ fontSize: 11, color: C.textS }}>In 150 meters</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setScreen('11-summary')}
+                    style={{
+                      background: C.redD, border: `1px solid ${C.red}`, color: C.red,
+                      padding: '4px 12px', borderRadius: 12, fontSize: 11, fontWeight: 700, cursor: 'pointer'
+                    }}
+                  >
+                    End Trip
+                  </button>
+                </div>
+
+                {/* Map with current route */}
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <MapContainer key="active-navigation-map" center={MAP_CENTER} zoom={15} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                    <TileLayerDark />
+                    <Polyline positions={SAFE_COORDS} pathOptions={{ color: C.green, weight: 6 }} />
+                    <Marker position={ORIGIN} icon={youIcon} />
+                    <Marker position={DEST} icon={makeMarker(C.green, 'Dest')} />
+                  </MapContainer>
+
+                  {/* Safety Corridor alert */}
+                  <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12, zIndex: 1000 }}>
+                    <div style={{
+                      background: 'rgba(19, 23, 32, 0.95)', border: `1px solid ${C.green}`, borderRadius: 12, padding: 12,
+                      display: 'flex', alignItems: 'center', gap: 10
+                    }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 4, background: C.green, boxShadow: `0 0 6px ${C.green}` }} />
+                      <span style={{ fontSize: 12, fontWeight: 600 }}>Active Safety Corridor: Well-lit area</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Bar */}
+                <div style={{ padding: '12px 20px', display: 'flex', justifyItems: 'center', justifyContent: 'space-between', gap: 10, background: C.bg }}>
+                  <button
+                    onClick={() => triggerToast('GPS coordinates broadcasted to emergency list!')}
+                    style={{
+                      flex: 1, height: 44, borderRadius: 22, background: C.card2, border: `1px solid ${C.border}`,
+                      color: C.text, fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                    }}
+                  >
+                    📡 Share GPS
+                  </button>
+                  <button
+                    onClick={() => setScreen('07-sos-trigger')}
+                    style={{
+                      flex: 1, height: 44, borderRadius: 22, background: C.red, border: 'none',
+                      color: C.white, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                      boxShadow: `0 4px 12px ${C.redD}`
+                    }}
+                  >
+                    🚨 SOS TRIGGER
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 7. SOS Trigger Screen */}
+            {screen === '07-sos-trigger' && (
+              <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                padding: '40px 24px 60px', background: 'radial-gradient(circle, rgba(239,68,68,0.1) 0%, rgba(11,14,20,1) 100%)'
+              }}>
+                <div style={{ display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: C.red, letterSpacing: 2 }}>EMERGENCY TRANSMISSION</span>
+                  <button
+                    onClick={() => setScreen('04-dashboard')}
+                    style={{ background: 'none', border: 'none', color: C.textS, fontSize: 14, cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                  <div style={{
+                    width: 160, height: 160, borderRadius: 80, background: C.redD,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: `4px solid ${C.red}`, cursor: 'pointer',
+                    boxShadow: '0 0 30px rgba(239,68,68,0.4)',
+                    animation: 'sosPulse 1.5s infinite'
+                  }}
+                  onClick={() => setScreen('08-sos-activated')}
+                  >
+                    <div style={{ color: C.white, fontSize: 32, fontWeight: 900 }}>SOS</div>
+                  </div>
+                  <span style={{ fontSize: 14, color: C.textS, textAlign: 'center' }}>Holding / Tapping triggers dispatch</span>
+                  <h2 style={{ fontSize: 48, fontWeight: 900, color: C.red, margin: 0 }}>0{sosCountdown}s</h2>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ background: C.card, borderRadius: 12, padding: 12, border: '1px solid #1c2130' }}>
+                    <div style={{ fontSize: 11, color: C.textS, marginBottom: 4 }}>DISSENT / STANDBY GROUP</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600 }}>
+                      <span>Mom & Dad (Parents)</span>
+                      <span style={{ color: C.green }}>Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 8. SOS Activated Screen */}
+            {screen === '08-sos-activated' && (
+              <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                padding: '40px 24px 60px', background: C.bg
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: 36, background: C.redD,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${C.red}`
+                  }}>
+                    <Volume2 size={36} color={C.red} />
+                  </div>
+                  <h1 style={{ fontSize: 32, fontWeight: 900, color: C.red, margin: 0, letterSpacing: 2 }}>ALERT DISPATCHED</h1>
+                  <p style={{ fontSize: 13, color: C.textS, textAlign: 'center', margin: 0, lineHeight: 1.6 }}>
+                    Siren activated. Emergency coordinates shared with closest response units and family.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ background: C.card, borderRadius: 12, padding: 14, border: '1px solid #1c2130' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>Dispatch Log</span>
+                      <span style={{ fontSize: 10, color: C.red, fontWeight: 800 }}>LIVE BROADCAST</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: C.textS }}>
+                      <div>👨‍👩‍👧 Parents notified via SMS (0s ago)</div>
+                      <div>🚔 Police Command Room alerted (1s ago)</div>
+                      <div>📍 High-resolution GPS streaming active</div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setScreen('04-dashboard');
+                      setActiveTab('home');
+                      triggerToast('SOS alert cancelled successfully.');
+                    }}
+                    style={{
+                      height: 52, borderRadius: 26, border: 'none', background: C.green, color: '#000',
+                      fontSize: 15, fontWeight: 800, cursor: 'pointer'
+                    }}
+                  >
+                    I am Safe - Cancel Alert
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 9. Hazard Report Screen */}
+            {screen === '09-hazard-report' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24, justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, color: C.white, margin: 0 }}>Report Hazard</h3>
+
+                  {/* Photo upload box */}
+                  <div style={{
+                    height: 120, background: C.card, border: `2px dashed ${C.border}`, borderRadius: 12,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer'
+                  }}>
+                    <Camera size={24} color={C.textS} />
+                    <span style={{ fontSize: 12, color: C.textS }}>Tap to attach photo</span>
+                  </div>
+
+                  {/* Category selector */}
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: C.textS, display: 'block', marginBottom: 8 }}>HAZARD TYPE</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {['Poor Lighting', 'Suspicious Person', 'Broken Road', 'Flooding'].map(type => {
+                        const isSel = selectedReportType === type;
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => setSelectedReportType(type)}
+                            style={{
+                              height: 38, borderRadius: 8, border: `1.5px solid ${isSel ? C.purple : C.border}`,
+                              background: isSel ? C.purpleD : C.card, color: isSel ? C.white : C.textS,
+                              fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                            }}
+                          >
+                            {type}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Severity selector */}
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: C.textS, display: 'block', marginBottom: 8 }}>SEVERITY LEVEL</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {['Low', 'Medium', 'High'].map(sev => {
+                        const isSel = reportSeverity === sev;
+                        let sColor = C.green;
+                        if (sev === 'Medium') sColor = C.amber;
+                        if (sev === 'High') sColor = C.red;
+
+                        return (
+                          <button
+                            key={sev}
+                            onClick={() => setReportSeverity(sev)}
+                            style={{
+                              flex: 1, height: 36, borderRadius: 8, border: `1.5px solid ${isSel ? sColor : C.border}`,
+                              background: isSel ? `${sColor}20` : C.card, color: isSel ? C.white : C.textS,
+                              fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                            }}
+                          >
+                            {sev}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: C.textS, display: 'block', marginBottom: 8 }}>DESCRIPTION</label>
+                    <textarea
+                      placeholder="Add auxiliary details here..."
+                      value={reportDesc}
+                      onChange={e => setReportDesc(e.target.value)}
+                      style={{
+                        width: '100%', height: 70, background: C.card, border: `1px solid ${C.border}`,
+                        borderRadius: 10, padding: 12, color: C.white, fontSize: 13, outline: 'none',
+                        resize: 'none', boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const newH = {
+                      id: Date.now(),
+                      pos: [12.978 + (Math.random() - 0.5) * 0.01, 77.602 + (Math.random() - 0.5) * 0.01],
+                      label: selectedReportType,
+                      type: selectedReportType.toLowerCase().includes('light') ? 'lighting' : 'other',
+                      severity: reportSeverity.toLowerCase()
+                    };
+                    setHazards(prev => [...prev, newH]);
+                    setScreen('10-community-map');
+                    setReportDesc('');
+                    triggerToast('Incident reported successfully!');
+                  }}
+                  style={{
+                    height: 50, borderRadius: 25, border: 'none', background: C.amber, color: '#000',
+                    fontSize: 15, fontWeight: 800, cursor: 'pointer'
+                  }}
+                >
+                  Publish Report
+                </button>
+              </div>
+            )}
+
+            {/* 10. Community Map */}
+            {screen === '10-community-map' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* Header info */}
+                <div style={{ padding: '12px 18px', background: C.card, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>Community Safety Map</h3>
+                  <span style={{ fontSize: 11, color: C.textS }}>{hazards.length} alerts near you</span>
+                </div>
+
+                {/* Map showing all reports */}
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <MapContainer key="community-map" center={MAP_CENTER} zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                    <TileLayerDark />
+                    {hazards.map(h => (
+                      <Marker key={h.id} position={h.pos} icon={makeHazardMarker(h.label, h.severity === 'high' ? C.red : C.amber)} />
+                    ))}
+                    <Marker position={ORIGIN} icon={youIcon} />
+                  </MapContainer>
+
+                  {/* Floating map controls to reset/add */}
+                  <button
+                    onClick={() => { setScreen('09-hazard-report'); }}
+                    style={{
+                      position: 'absolute', bottom: 20, right: 20, zIndex: 1000,
+                      width: 50, height: 50, borderRadius: 25, background: C.purple, border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.white,
+                      boxShadow: '0 4px 15px rgba(99,102,241,0.5)', cursor: 'pointer'
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+
+                {renderBottomNav('report')}
+              </div>
+            )}
+
+            {/* 11. Route Summary */}
+            {screen === '11-summary' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24, justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+                  <div style={{
+                    width: 60, height: 60, borderRadius: 30, background: C.greenD,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <CheckCircle2 size={36} color={C.green} />
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <h2 style={{ fontSize: 24, fontWeight: 800, color: C.white, margin: '0 0 4px' }}>Arrived Safely!</h2>
+                    <span style={{ fontSize: 13, color: C.textS }}>Trip ended • Jul 21, 2026</span>
+                  </div>
+
+                  {/* Safety Score gauge */}
+                  <div style={{
+                    width: 120, height: 120, borderRadius: 60, border: `6px solid ${C.green}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    background: C.card, boxShadow: `0 0 20px ${C.greenD}`
+                  }}>
+                    <span style={{ fontSize: 32, fontWeight: 900, color: C.green }}>96</span>
+                    <span style={{ fontSize: 10, color: C.textS }}>Safety Score</span>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, width: '100%' }}>
+                    {[
+                      { val: '4.2 km', label: 'Distance Traveled' },
+                      { val: '28 min', label: 'Travel Duration' },
+                      { val: '97%', label: 'Lit Corridor Ratio' },
+                      { val: '0', label: 'Alerts Triggered' },
+                    ].map((st, idx) => (
+                      <div key={idx} style={{ background: C.card, padding: 12, borderRadius: 10, border: '1px solid #1c2130' }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: C.white }}>{st.val}</div>
+                        <div style={{ fontSize: 10, color: C.textS }}>{st.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, color: C.textS }}>Rate this route:</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star key={star} size={14} fill={star <= 4 ? C.amber : 'none'} color={C.amber} />
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setScreen('04-dashboard'); setActiveTab('home'); }}
+                    style={{
+                      height: 50, borderRadius: 25, border: 'none', background: C.purple, color: C.white,
+                      fontSize: 15, fontWeight: 800, cursor: 'pointer'
+                    }}
+                  >
+                    Return to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 12. Profile Screen */}
+            {screen === '12-profile' && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <div style={{ padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 40, background: C.purple, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 800 }}>SK</div>
+                  <div style={{ textAlign: 'center' }}>
+                    <h3 style={{ margin: '0 0 2px', fontSize: 20, fontWeight: 800 }}>Sahil Kumar</h3>
+                    <span style={{ fontSize: 13, color: C.textS }}>sahil@example.com</span>
+                  </div>
+                  <div style={{ background: C.purpleD, color: C.purple, padding: '4px 12px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+                    ✓ Verified Commuter
+                  </div>
+                </div>
+
+                {/* Profile metrics */}
+                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '10px 20px', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>47</div>
+                    <div style={{ fontSize: 10, color: C.textS }}>Safe Journeys</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>96%</div>
+                    <div style={{ fontSize: 10, color: C.textS }}>Avg Safety Score</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>2</div>
+                    <div style={{ fontSize: 10, color: C.textS }}>Safety Contacts</div>
+                  </div>
+                </div>
+
+                {/* Settings list */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: C.textM, letterSpacing: 1 }}>EMERGENCY CONTACTS</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '8px 0 20px' }}>
+                    <div style={{ background: C.card, padding: 12, borderRadius: 10, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Mom (Priya Kumar)</div>
+                        <div style={{ fontSize: 11, color: C.textS }}>+91 98765 00001</div>
+                      </div>
+                      <span>⚙️</span>
+                    </div>
+                    <div style={{ background: C.card, padding: 12, borderRadius: 10, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>Dad (Rajesh Kumar)</div>
+                        <div style={{ fontSize: 11, color: C.textS }}>+91 98765 00002</div>
+                      </div>
+                      <span>⚙️</span>
+                    </div>
+                  </div>
+
+                  <span style={{ fontSize: 10, fontWeight: 700, color: C.textM, letterSpacing: 1 }}>PREFERENCES</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '8px 0' }}>
+                    <div style={{ background: C.card, padding: 12, borderRadius: 10, display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Automatic SOS Countdown</span>
+                      <span style={{ color: C.purple, fontWeight: 700 }}>ON</span>
+                    </div>
+                    <button
+                      onClick={() => { setScreen('01-splash'); triggerToast('Signed out.'); }}
+                      style={{
+                        width: '100%', height: 44, borderRadius: 10, background: C.redD, border: `1px solid ${C.red}`,
+                        color: C.red, fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 12
+                      }}
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+
+                {renderBottomNav('profile')}
+              </div>
+            )}
+
           </div>
-        )}
 
-        {/* ═════════════════════════════════════
-            MODAL — HAZARD REPORT
-        ═════════════════════════════════════ */}
-        {hazardModal && (
+          {/* Home indicator bar */}
           <div style={{
-            position: 'absolute', inset: 0, zIndex: 900,
-            background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
-            display: 'flex', alignItems: 'flex-end',
+            height: 24, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderTop: screen === '01-splash' || screen === '02-onboarding' || screen === '03-login' || screen === '07-sos-trigger' || screen === '08-sos-activated' || screen === '11-summary' ? 'none' : `1px solid ${C.border}`
           }}>
-            <div style={{
-              width: '100%', background: T.bg1,
-              borderRadius: '22px 22px 0 0', border: `1px solid ${T.border}`, borderBottom: 'none',
-              padding: '16px 16px 24px',
-              animation: 'slideUp 0.28s cubic-bezier(0.16,1,0.3,1)',
-            }}>
-              {/* Handle */}
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 14px' }} />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ color: T.text0, fontSize: 14, fontWeight: 800 }}>Report Safety Hazard</span>
-                <button onClick={() => setHazardModal(false)} style={{
-                  background: T.bg3, border: 'none', width: 26, height: 26, borderRadius: 13,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                }}><X size={12} color={T.text1} /></button>
-              </div>
-
-              <div style={{ color: T.text2, fontSize: 9, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>Category</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 10 }}>
-                {['Dim Lighting', 'Blocked Path', 'Suspicious Crowd', 'Unsafe Road'].map(cat => (
-                  <div key={cat} onClick={() => setHazardCat(cat)} style={{
-                    background: hazardCat === cat ? T.purpleDim : T.bg2,
-                    border: `1.5px solid ${hazardCat === cat ? T.purple : T.border}`,
-                    borderRadius: 10, padding: '8px', textAlign: 'center',
-                    cursor: 'pointer', color: hazardCat === cat ? T.purple : T.text1,
-                    fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
-                  }}>{cat}</div>
-                ))}
-              </div>
-
-              <input
-                type="text" placeholder="Add notes (optional)"
-                value={hazardNote} onChange={e => setHazardNote(e.target.value)}
-                style={{
-                  width: '100%', background: T.bg2, border: `1px solid ${T.border}`,
-                  borderRadius: 10, padding: '9px 12px', color: T.text0, fontSize: 12,
-                  outline: 'none', boxSizing: 'border-box', marginBottom: 10, fontFamily: 'Inter',
-                }}
-              />
-              <button onClick={submitHazard} style={{
-                width: '100%', padding: '12px 0', borderRadius: 11,
-                background: T.amber, border: 'none', color: '#000',
-                fontWeight: 800, fontSize: 12, cursor: 'pointer', fontFamily: 'Inter',
-                boxShadow: `0 4px 16px rgba(255,197,66,0.4)`,
-              }}>📍 Publish Hazard Report</button>
-            </div>
+            <div style={{ width: 120, height: 4, borderRadius: 2, background: C.border }} />
           </div>
-        )}
-
-        <HomeBar />
+        </div>
       </div>
     </div>
   );
