@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 740" width="360" height="740" style="background:#F8FAFC; font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;">
+        <!-- Light Theme Status Bar -->
+        <g id="Status-Bar">
+            <rect x="0" y="0" width="360" height="40" fill="#F8FAFC"/>
+            <text x="24" y="24" fill="#0F172A" font-size="12" font-weight="700">9:41</text>
+            <!-- Notch -->
+            <rect x="105" y="0" width="150" height="24" rx="12" fill="#E2E8F0"/>
+            <circle cx="180" cy="12" r="4" fill="#CBD5E1"/>
+            <!-- Signals (Dark indicators) -->
+            <path d="M300 14h2v8h-2zm4-3h2v11h-2zm4-3h2v14h-2zm4-4h2v18h-2z" fill="#0F172A"/>
+            <rect x="320" y="11" width="18" height="10" rx="2" fill="none" stroke="#0F172A" stroke-width="1"/>
+            <rect x="322" y="13" width="12" height="6" fill="#10B981"/>
+        </g>
+        
+        
+        <!-- Dark Blur Background -->
+        <rect x="0" y="40" width="360" height="700" fill="#FFFFFF" opacity="0.95"/>
+        
+        <!-- Outer Glowing Warning Rings -->
+        <circle cx="180" cy="300" r="90" fill="none" stroke="#EF4444" stroke-width="2" stroke-dasharray="10 10"/>
+        <circle cx="180" cy="300" r="76" fill="#EF4444" opacity="0.1"/>
+        <circle cx="180" cy="300" r="64" fill="#EF4444"/>
+        
+        <!-- Big Number -->
+        <text x="180" y="318" fill="#FFFFFF" font-size="52" font-weight="800" text-anchor="middle">3</text>
+        
+        <!-- Heading text -->
+        <text x="180" y="440" fill="#0F172A" font-size="20" font-weight="800" text-anchor="middle">Triggering SOS Alarm</text>
+        <text x="180" y="465" fill="#475569" font-size="12" text-anchor="middle">Notifying emergency contacts in 3 seconds...</text>
+        
+        <!-- Actions checklist -->
+        <g transform="translate(60, 500)" opacity="0.9">
+            <!-- Action 1 -->
+            <circle cx="15" cy="15" r="8" fill="#10B981"/>
+            <text x="15" y="18" fill="#FFFFFF" font-size="9" font-weight="800" text-anchor="middle">✓</text>
+            <text x="32" y="18" fill="#0F172A" font-size="12" font-weight="600">Formatting live coordinates</text>
+            
+            <!-- Action 2 -->
+            <circle cx="15" cy="40" r="8" fill="none" stroke="#94A3B8" stroke-width="2"/>
+            <text x="32" y="43" fill="#475569" font-size="12">Drafting emergency SMS log</text>
+        </g>
+        
+        <!-- Hold to Cancel button -->
+        <rect x="40" y="620" width="280" height="52" rx="26" fill="#FFFFFF" stroke="#EF4444" stroke-width="1.5"/>
+        <text x="180" y="652" fill="#EF4444" font-size="14" font-weight="800" text-anchor="middle">Tap to Cancel Alarm</text>
+    
+        
+        <!-- Home Bar Indicator -->
+        <g id="Home-Indicator">
+            <rect x="120" y="730" width="120" height="4" rx="2" fill="#CBD5E1"/>
+        </g>
+        </svg>
