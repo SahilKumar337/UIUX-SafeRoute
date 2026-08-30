@@ -140,15 +140,19 @@ const DarkTileLayer = () => (
   />
 );
 
-// Auto-adjust map viewport to fit route or origin + destination
-const MapBoundsFitter = ({ origin, destination, routeCoords }) => {
+// Auto-adjust map viewport to fit both safe and shortcut routes simultaneously
+const MapBoundsFitter = ({ origin, destination, routeCoords, altCoords }) => {
   const map = useMap();
   useEffect(() => {
     if (!map) return;
-    if (routeCoords && routeCoords.length >= 2) {
+    const allCoords = [
+      ...(routeCoords || []),
+      ...(altCoords || []),
+    ];
+    if (allCoords.length >= 2) {
       try {
-        const bounds = L.latLngBounds(routeCoords);
-        map.fitBounds(bounds, { padding: [35, 35], maxZoom: 16 });
+        const bounds = L.latLngBounds(allCoords);
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
       } catch (_) {}
     } else if (origin && destination) {
       try {
@@ -161,7 +165,7 @@ const MapBoundsFitter = ({ origin, destination, routeCoords }) => {
     } else if (origin) {
       map.setView([origin.lat, origin.lng], 15);
     }
-  }, [map, origin?.lat, origin?.lng, destination?.lat, destination?.lng, routeCoords]);
+  }, [map, origin?.lat, origin?.lng, destination?.lat, destination?.lng, routeCoords, altCoords]);
   return null;
 };
 
@@ -1057,8 +1061,8 @@ export default function MobilePrototype() {
         routeLoading && <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${C.primary}`, borderTopColor: 'transparent', animation: 'spinSlow 0.8s linear infinite' }} />
       } />
 
-      {/* Search inputs */}
-      <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', zIndex: 100 }}>
+      {/* Search inputs with elevated z-index above map */}
+      <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6, position: 'relative', zIndex: 5000 }}>
         {/* Origin */}
         <div style={{ background: C.bgCard2, border: `1px solid ${C.border}`, borderRadius: 10, height: 38, display: 'flex', alignItems: 'center', padding: '0 10px', gap: 7 }}>
           <LocateFixed size={13} color={C.safe} />
@@ -1068,8 +1072,8 @@ export default function MobilePrototype() {
         </div>
 
         {/* Destination with Real OSM Search */}
-        <div style={{ position: 'relative' }}>
-          <div style={{ background: C.bgCard2, border: `1px solid ${showSugg ? C.cyan : C.borderNeon}`, borderRadius: 10, height: 40, display: 'flex', alignItems: 'center', padding: '0 10px', gap: 7 }}>
+        <div style={{ position: 'relative', zIndex: 5100 }}>
+          <div style={{ background: C.bgCard2, border: `1px solid ${showSugg ? C.cyan : C.borderNeon}`, borderRadius: 10, height: 40, display: 'flex', alignItems: 'center', padding: '0 10px', gap: 7, position: 'relative', zIndex: 5200 }}>
             <MapPin size={13} color={C.primary} />
             <input
               value={dest}
@@ -1096,17 +1100,28 @@ export default function MobilePrototype() {
             )}
           </div>
 
-          {/* Real Live Place Autocomplete Dropdown */}
+          {/* Transparent Backdrop to dismiss dropdown on click outside */}
+          {showSugg && searchResults.length > 0 && (
+            <div
+              onClick={() => setShowSugg(false)}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 5250, background: 'transparent'
+              }}
+            />
+          )}
+
+          {/* Real Live Place Autocomplete Dropdown floating OVER map */}
           {showSugg && searchResults.length > 0 && (
             <div style={{
-              position: 'absolute', top: 44, left: 0, right: 0, zIndex: 9999,
-              background: 'rgba(13,19,34,0.98)', backdropFilter: 'blur(20px)',
+              position: 'absolute', top: 46, left: 0, right: 0, zIndex: 5300,
+              background: 'rgba(13,19,34,0.98)', backdropFilter: 'blur(24px)',
               border: `1.5px solid ${C.cyan}`, borderRadius: 12, padding: 5,
-              boxShadow: `0 14px 40px rgba(0,0,0,0.95), 0 0 20px ${C.cyanGlow}`,
+              boxShadow: `0 18px 45px rgba(0,0,0,0.98), 0 0 25px ${C.cyanGlow}`,
               maxHeight: 220, overflowY: 'auto',
             }}>
-              <div style={{ padding: '4px 8px', fontSize: 9, fontWeight: 900, color: C.cyan, letterSpacing: 0.5, borderBottom: `1px solid ${C.border}` }}>
-                GLOBAL SEARCH RESULTS
+              <div style={{ padding: '4px 8px', fontSize: 9, fontWeight: 900, color: C.cyan, letterSpacing: 0.5, borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>GLOBAL SEARCH RESULTS</span>
+                <span onClick={() => setShowSugg(false)} style={{ cursor: 'pointer', fontSize: 10, color: C.textS }}>✕ close</span>
               </div>
               {searchResults.map((place) => (
                 <div
@@ -1118,7 +1133,7 @@ export default function MobilePrototype() {
                     borderBottom: `1px solid rgba(255,255,255,0.04)`,
                     transition: 'background 0.15s ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.2)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.25)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <div style={{ maxWidth: '80%' }}>
@@ -1155,8 +1170,8 @@ export default function MobilePrototype() {
         </div>
       </div>
 
-      {/* Map with Interactive Pinning */}
-      <div style={{ flex: 1, position: 'relative' }}>
+      {/* Map with Interactive Pinning & Dual Route Rendering */}
+      <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
         {position && (
           <MapContainer
             key={`route-map-${position.lat}-${destCoord.lat}-${screen}`}
@@ -1171,30 +1186,40 @@ export default function MobilePrototype() {
               origin={position}
               destination={destCoord}
               routeCoords={safeRoute ? safeRoute.coordinates : null}
+              altCoords={fastRoute ? fastRoute.coordinates : null}
             />
             <MapClickHandler onMapClick={handleMapClickSetDest} />
+            
+            {/* 1. Safe Route (Avenue / Lit Corridor) */}
             {safeRoute && (
               <Polyline
                 positions={safeRoute.coordinates}
                 pathOptions={{
                   color: C.safe,
-                  weight: selectedRoute === 'safe' ? 6 : 3,
-                  opacity: selectedRoute === 'safe' ? 1 : 0.4,
+                  weight: selectedRoute === 'safe' ? 7 : 4,
+                  opacity: selectedRoute === 'safe' ? 1.0 : 0.60,
+                  dashArray: selectedRoute === 'safe' ? null : '6 6',
                   lineCap: 'round',
+                  lineJoin: 'round',
                 }}
               />
             )}
+            
+            {/* 2. Shortest / Direct Shortcut Path (Unlit / High Risk) */}
             {fastRoute && (
               <Polyline
                 positions={fastRoute.coordinates}
                 pathOptions={{
                   color: C.danger,
-                  weight: selectedRoute === 'fast' ? 6 : 3,
-                  opacity: selectedRoute === 'fast' ? 1 : 0.35,
-                  dashArray: '7 5',
+                  weight: selectedRoute === 'fast' ? 7 : 4,
+                  opacity: selectedRoute === 'fast' ? 1.0 : 0.60,
+                  dashArray: selectedRoute === 'fast' ? null : '6 6',
+                  lineCap: 'round',
+                  lineJoin: 'round',
                 }}
               />
             )}
+            
             <Marker position={[position.lat, position.lng]} icon={makeGpsIcon(C.cyan)} />
             {destCoord && <Marker position={[destCoord.lat, destCoord.lng]} icon={makeDestIcon(dest)} />}
           </MapContainer>

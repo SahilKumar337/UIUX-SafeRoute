@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // ── Demo GPS waypoints around Cubbon Park → Brigade Road, Bengaluru ──
 const DEMO_PATH = [
@@ -26,14 +26,27 @@ const DEMO_ORIGIN = DEMO_PATH[0];
  * @param {boolean} demoMode - if true, simulates GPS along Bengaluru demo path
  * @returns {{ position, permissionStatus, error, demoIndex, demoPathLength }}
  */
-export const useGeolocation = (demoMode = true) => {
-  const [position, setPosition] = useState({
-    lat: DEMO_ORIGIN.lat,
-    lng: DEMO_ORIGIN.lng,
-    accuracy: 10,
-    heading: 42,
-    speed: 1.3,
+export const useGeolocation = (demoMode = false) => {
+  const [position, setPosition] = useState(() => {
+    if (demoMode) return { ...DEMO_ORIGIN, accuracy: 8, heading: 42, speed: 1.3 };
+    // Check cached real position
+    try {
+      const savedLat = localStorage.getItem('sr_lat');
+      const savedLng = localStorage.getItem('sr_lng');
+      if (savedLat && savedLng) {
+        return {
+          lat: parseFloat(savedLat),
+          lng: parseFloat(savedLng),
+          accuracy: 15,
+          heading: 0,
+          speed: 0,
+        };
+      }
+    } catch (_) {}
+    // Default fallback to Punjab area if nothing cached
+    return { lat: 31.2536, lng: 75.7037, accuracy: 15, heading: 0, speed: 0 };
   });
+
   const [permissionStatus, setPermissionStatus] = useState(demoMode ? 'granted' : 'prompt');
   const [error, setError] = useState(null);
   const [demoIndex, setDemoIndex] = useState(0);
@@ -66,7 +79,7 @@ export const useGeolocation = (demoMode = true) => {
           heading: 30 + Math.random() * 50,
           speed: 1.1 + Math.random() * 0.9,
         });
-      }, 4000);
+      }, 3500);
 
       return () => {
         clearInterval(demoIntervalRef.current);
@@ -80,28 +93,42 @@ export const useGeolocation = (demoMode = true) => {
       return;
     }
 
-    const opts = { enableHighAccuracy: true, timeout: 12000, maximumAge: 2000 };
+    const opts = { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 };
 
-    watchRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        setPermissionStatus('granted');
-        setError(null);
-        setPosition({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy ?? 20,
-          heading: pos.coords.heading ?? null,
-          speed: pos.coords.speed ?? null,
-        });
+    const updateCoords = (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      setPermissionStatus('granted');
+      setError(null);
+      setPosition({
+        lat,
+        lng,
+        accuracy: pos.coords.accuracy ?? 15,
+        heading: pos.coords.heading ?? 0,
+        speed: pos.coords.speed ?? 0,
+      });
+      try {
+        localStorage.setItem('sr_lat', lat.toString());
+        localStorage.setItem('sr_lng', lng.toString());
+      } catch (_) {}
+    };
+
+    // Immediate one-time quick fetch
+    navigator.geolocation.getCurrentPosition(
+      updateCoords,
+      (err) => {
+        console.warn('GPS initial lock:', err.message);
       },
+      opts
+    );
+
+    // Continuous watch
+    watchRef.current = navigator.geolocation.watchPosition(
+      updateCoords,
       (err) => {
         if (err.code === err.PERMISSION_DENIED) {
           setPermissionStatus('denied');
-          setError('Location access denied. Enable in browser settings.');
-        } else if (err.code === err.TIMEOUT) {
-          setError('GPS signal timeout — retrying…');
-        } else {
-          setError('Unable to get location: ' + err.message);
+          setError('Location permission denied.');
         }
       },
       opts
@@ -121,6 +148,6 @@ export const useGeolocation = (demoMode = true) => {
     demoIndex,
     demoPathLength: DEMO_PATH.length,
     demoPath: DEMO_PATH,
-    originCoord: demoMode ? DEMO_ORIGIN : null,
+    originCoord: demoMode ? DEMO_ORIGIN : position,
   };
 };
